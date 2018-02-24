@@ -22,6 +22,7 @@ public class SwarmerContextRetriever {
       SwarmerContext.Builder swarmerBuilder = SwarmerContext.newBuilder();
       for (Map.Entry<String, Section> entry : ini.entrySet()) {
          Ini.Section section = ini.get(entry.getKey());
+         // In case we encounter [default] section we fill the special field in SwarmerContext
          if (DEFAULT_SECTION_NAME.equalsIgnoreCase(section.getName())) {
             swarmerBuilder.setDefaultSection(section);
          } else {

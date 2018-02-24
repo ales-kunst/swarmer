@@ -1,32 +1,51 @@
 package org.swarmer.context;
 
+import java.io.File;
+
 import org.ini4j.Ini;
 
 public class SwarmConfig {
    
    public static final String SOURCE_PATH = "src.folder";
    public static final String TARGET_PATH = "dest.folder";
-   public static final String FILENAME = "filename";
+   public static final String FILE_PATTERN = "file.pattern";
    
    private final Ini.Section section;
+   private final File srcPath;
+   private final File destPath;
    
    public SwarmConfig(Ini.Section section) {
       this.section = section;
+      this.srcPath = new File(getSrcPathFromIni());
+      this.destPath = new File(getDestPathFromIni());
    }
    
    public String getName() {
       return section.getName();
    }
+   
+   public final File getSourcePath() {
+      return srcPath;
+   }
+   
+   public final File getTargetPath() {
+      return destPath;
+   }
+   
+   public final boolean matchesFilePattern(String fileName) {
+      String pattern = getFilenamePatternFromIni();
+      return fileName.matches(pattern);
+   }
 
-   public String getSourcePath() {
+   private String getSrcPathFromIni() {
       return section.get(SOURCE_PATH);
    }
    
-   public String getTargetPath() {
+   private String getDestPathFromIni() {
       return section.get(TARGET_PATH);
    }
    
-   public String getFilename() {
-      return section.get(FILENAME);
+   private String getFilenamePatternFromIni() {
+      return section.get(FILE_PATTERN);
    }
 }

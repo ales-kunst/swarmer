@@ -18,7 +18,7 @@ public class Main {
          FolderChangesWatcher folderChangesWatcher = new FolderChangesWatcher();
          folderChangesWatcher.start();
       } catch (Exception e) {
-         e.printStackTrace();
+         LOG.error("Swarmer ended with error: {}", e);
       }
    }
 }
