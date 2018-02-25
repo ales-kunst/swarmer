@@ -1,4 +1,4 @@
-package com.swarmer.watcher;
+package org.swarmer.watcher;
 
 import java.io.File;
 import java.io.IOException;
