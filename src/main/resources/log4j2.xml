@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+  <Appenders>
+    <Console name="Console">
+      <PatternLayout pattern="[%-5level][XML] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n" />
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Root level="TRACE">
+      <AppenderRef ref="Console" />
+    </Root>
+    <logger name="org.swarmer" level="ALL" additivity="false">
+      <AppenderRef ref="Console" />
+    </logger>
+  </Loggers>
+</Configuration>

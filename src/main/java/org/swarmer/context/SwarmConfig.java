@@ -2,9 +2,13 @@ package org.swarmer.context;
 
 import java.io.File;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.ini4j.Ini;
 
 public class SwarmConfig {
+   
+   private static final Logger LOG = LogManager.getLogger(SwarmConfig.class);
    
    public static final String SOURCE_PATH = "src.folder";
    public static final String TARGET_PATH = "dest.folder";
@@ -34,7 +38,9 @@ public class SwarmConfig {
    
    public final boolean matchesFilePattern(String fileName) {
       String pattern = getFilenamePatternFromIni();
-      return fileName.matches(pattern);
+      boolean matches = fileName.matches(pattern);
+      LOG.debug("Using pattern {} on filename {} [match: {}].", pattern, fileName, matches);
+      return matches;
    }
 
    private String getSrcPathFromIni() {

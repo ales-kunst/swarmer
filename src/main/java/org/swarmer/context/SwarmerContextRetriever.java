@@ -4,11 +4,15 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
 
 // Check: http://www.logicbig.com/tutorials/core-java-tutorial/java-nio/java-watch-service/
 public class SwarmerContextRetriever {
+   
+   private static final Logger LOG = LogManager.getLogger(SwarmConfig.class);
    
    public static final String DEFAULT_SECTION_NAME = "default";
 
@@ -18,6 +22,14 @@ public class SwarmerContextRetriever {
     */
    public static SwarmerContext retrieve(String iniFilePathname) throws IOException {
       File iniFile = new File(iniFilePathname);
+      
+      if (!iniFile.exists()) {
+         String errorMsg = String.format("Ini file [%s] does not exist.", iniFilePathname);
+         LOG.error(errorMsg);
+         throw new IOException(errorMsg);
+      }
+      
+      LOG.info("Reading configuration from {} file.", iniFilePathname);
       Ini ini = new Ini(iniFile);
       SwarmerContext.Builder swarmerBuilder = SwarmerContext.newBuilder();
       for (Map.Entry<String, Section> entry : ini.entrySet()) {
