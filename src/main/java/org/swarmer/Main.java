@@ -7,9 +7,9 @@ import org.swarmer.watcher.FolderChangesWatcher;
 
 
 public class Main {
-   
-   private static final Logger LOG = LogManager.getLogger(Main.class); 
-   
+
+   private static final Logger LOG = LogManager.getLogger(Main.class);
+
    public static void main(String[] args) {
       try {
          LOG.info("Program started!!!");
