@@ -1,6 +1,11 @@
 package org.swarmer.context;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class SwarmInstanceData {
+
+   private static final Logger LOG = LogManager.getLogger(SwarmInstanceData.class);
 
    private final SwarmConfig swarmConfig;
    private       long        numOfErrors;

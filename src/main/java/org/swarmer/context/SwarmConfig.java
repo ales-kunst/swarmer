@@ -8,10 +8,11 @@ import java.io.File;
 
 public class SwarmConfig {
 
-   public static final String SOURCE_PATH  = "src.folder";
-   public static final String TARGET_PATH  = "dest.folder";
-   public static final String FILE_PATTERN = "file.pattern";
-   private static final Logger LOG = LogManager.getLogger(SwarmConfig.class);
+   public static final  String SOURCE_PATH  = "src.folder";
+   public static final  String TARGET_PATH  = "dest.folder";
+   public static final  String FILE_PATTERN = "file.pattern";
+   private static final Logger LOG          = LogManager.getLogger(SwarmConfig.class);
+
    private final Ini.Section section;
    private final File        srcPath;
    private final File        destPath;

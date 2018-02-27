@@ -12,8 +12,9 @@ import java.util.Map;
 // Check: http://www.logicbig.com/tutorials/core-java-tutorial/java-nio/java-watch-service/
 public class SwarmerContextRetriever {
 
-   public static final  String DEFAULT_SECTION_NAME = "default";
-   private static final Logger LOG                  = LogManager.getLogger(SwarmConfig.class);
+   public static final String DEFAULT_SECTION_NAME = "default";
+
+   private static final Logger LOG = LogManager.getLogger(SwarmConfig.class);
 
    /**
     * @param iniFilePathname

@@ -1,5 +1,7 @@
 package org.swarmer.context;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.ini4j.Ini;
 
 import java.util.ArrayList;
@@ -12,6 +14,7 @@ import java.util.List;
  * @author aq
  */
 public class SwarmerContext {
+   private static final Logger LOG = LogManager.getLogger(SwarmerContext.class);
 
    /**
     * Instance of SwarmerContext.
