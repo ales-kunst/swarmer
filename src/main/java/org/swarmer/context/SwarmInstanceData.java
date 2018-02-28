@@ -3,6 +3,8 @@ package org.swarmer.context;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.File;
+
 public class SwarmInstanceData {
 
    private static final Logger LOG = LogManager.getLogger(SwarmInstanceData.class);
@@ -21,8 +23,16 @@ public class SwarmInstanceData {
       return swarmConfig;
    }
 
-   public String getName() {
-      return swarmConfig.getName();
+   public final String getName() {
+      return getSwarmConfig().getName();
    }
+
+   public final File getSourcePath() { return getSwarmConfig().getSourcePath(); }
+
+   public final File getTargetPath() {
+      return getSwarmConfig().getTargetPath();
+   }
+
+   public final boolean matchesFilePattern(String fileName) { return getSwarmConfig().matchesFilePattern(fileName); }
 
 }

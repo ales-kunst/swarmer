@@ -74,6 +74,11 @@ public class SwarmerContext {
       return swarmConfigs;
    }
 
+   public SwarmInstanceData[] getSwarmInstances() {
+      SwarmInstanceData[] resultArray = new SwarmInstanceData[swarmInstances.size()];
+      return  swarmInstances.toArray(resultArray);
+   }
+
    /**
     * Help for building SwarmerContext in more concise
     * way.
