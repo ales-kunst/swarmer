@@ -7,25 +7,38 @@ import org.swarmer.context.SwarmInstanceData;
 
 import java.io.File;
 import java.nio.file.WatchKey;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 public class FolderChangesContext {
-   private static final Logger LOG = LogManager.getLogger(FolderChangesContext.class);
+   private final static Integer INITIAL_REF_VALUE = 1;
+   private static final Logger  LOG               = LogManager.getLogger(FolderChangesContext.class);
 
-   private List<File>                       checkedFilesForLocking;
+   private Map<File, Integer>               checkedFilesForLockingRef;
    private Map<WatchKey, SwarmInstanceData> watchKeySwarmInstanceMap;
 
    public FolderChangesContext() {
-      watchKeySwarmInstanceMap = new HashMap<WatchKey, SwarmInstanceData>();
-      checkedFilesForLocking = new ArrayList<>();
+      watchKeySwarmInstanceMap = new HashMap<>();
+      checkedFilesForLockingRef = new HashMap<>();
    }
 
    public boolean addCheckedFileForLocking(File checkedFile) {
-      boolean wasAdded = false;
-      if (findCheckedFileForLocking(checkedFile) == null) {
-         checkedFilesForLocking.add(checkedFile);
+      boolean wasAdded             = false;
+      File    fileToRemoveFromList = findCheckedFileForLocking(checkedFile);
+      if (fileToRemoveFromList != null) {
+         Integer refValue = checkedFilesForLockingRef.get(fileToRemoveFromList);
+         ++refValue;
+         checkedFilesForLockingRef.put(fileToRemoveFromList, refValue);
+         LOG.debug("Increased element value [{} -> {}] in checkedFilesForLocking collection.",
+                   fileToRemoveFromList, refValue);
+      } else {
+         checkedFilesForLockingRef.put(checkedFile, INITIAL_REF_VALUE);
          wasAdded = true;
+         LOG.debug("Added element value [{} -> {}] to checkedFilesForLocking collection.",
+                   checkedFile, INITIAL_REF_VALUE);
       }
+
       return wasAdded;
    }
 
@@ -35,13 +48,12 @@ public class FolderChangesContext {
 
    public File findCheckedFileForLocking(File checkedFile) {
       File fileFromList = null;
-      Optional<File> searchResult = checkedFilesForLocking.stream()
-                                                          .filter(file -> file.getAbsolutePath()
-                                                                              .equalsIgnoreCase(
-                                                                                      checkedFile.getAbsolutePath()))
-                                                          .findFirst();
-      if (searchResult.isPresent()) {
-         fileFromList = searchResult.get();
+      for (Map.Entry<File, Integer> entry : checkedFilesForLockingRef.entrySet()) {
+         String entryAbsolutePath = entry.getKey().getAbsolutePath();
+         if (entryAbsolutePath.equalsIgnoreCase(checkedFile.getAbsolutePath())) {
+            fileFromList = entry.getKey();
+            break;
+         }
       }
 
       return fileFromList;
@@ -71,9 +83,18 @@ public class FolderChangesContext {
       boolean wasRemoved           = false;
       File    fileToRemoveFromList = findCheckedFileForLocking(checkedFile);
       if (fileToRemoveFromList != null) {
-         checkedFilesForLocking.remove(fileToRemoveFromList);
-         wasRemoved = true;
-         LOG.debug("Removed file [{}] from checkedFilesForLocking.", fileToRemoveFromList);
+         Integer refValue = checkedFilesForLockingRef.get(fileToRemoveFromList);
+         if (refValue.equals(INITIAL_REF_VALUE)) {
+            LOG.debug("Removed element [{} -> {}] from checkedFilesForLocking collection.", fileToRemoveFromList,
+                      refValue);
+            checkedFilesForLockingRef.remove(fileToRemoveFromList);
+            wasRemoved = true;
+         } else {
+            --refValue;
+            checkedFilesForLockingRef.put(fileToRemoveFromList, refValue);
+            LOG.debug("Decreased element value [{} -> {}] from checkedFilesForLocking collection.",
+                      fileToRemoveFromList, refValue);
+         }
       }
       return wasRemoved;
    }

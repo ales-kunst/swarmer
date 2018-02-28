@@ -43,12 +43,21 @@ public class FolderChangesWatcher {
    }
 
    private void processModifyEvent(WatchKey queuedKey, WatchEvent<?> watchEvent) throws IOException {
-      Path srcPath  = getFullPath(queuedKey, watchEvent);
-      Path destPath = getDestPath(queuedKey, watchEvent);
+      final int MAX_ITEARTIONS = 5;
+      Path      srcPath        = getFullPath(queuedKey, watchEvent);
+      Path      destPath       = getDestPath(queuedKey, watchEvent);
 
       boolean canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath, ctx);
-      // Dest file should not be present because it should be deleted when source file is created
-      boolean destFileExists         = !FileUtil.removeFile(destPath);
+
+      if (!canSrcFileBeLocked) {
+         try {
+            LOG.trace("Sleep for {} ms", SwarmerContext.instance().getLockWaitTimeout());
+            Thread.sleep(SwarmerContext.instance().getLockWaitTimeout());
+         } catch (InterruptedException e) {}
+         canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath, ctx);
+      }
+      // Dest file should not be present because it should be deleted before copying
+      boolean destFileExists         = destPath.toFile().exists() ? !FileUtil.removeFile(destPath) : false;
       boolean fileAccessConditionsOk = canSrcFileBeLocked && !destFileExists;
 
       if (!canSrcFileBeLocked) {
@@ -66,19 +75,18 @@ public class FolderChangesWatcher {
       for (WatchEvent<?> watchEvent : queuedKey.pollEvents()) {
          Path srcPath = getFullPath(queuedKey, watchEvent);
 
-         LOG.trace("Event... kind={}, count={}, context={} path={}", watchEvent.kind(), watchEvent.count(),
-                   watchEvent.context(),
-                   srcPath.toFile().getAbsolutePath());
-
          String  srcFilename             = srcPath.toFile().getName();
          boolean isFile                  = srcPath.toFile().isFile();
          boolean fileMatchesPattern      = ctx.getSwarmConfig(queuedKey).matchesFilePattern(srcFilename);
          boolean isValidFile             = isFile && fileMatchesPattern;
-         boolean isValidCreateEvent      = (watchEvent.kind() == StandardWatchEventKinds.ENTRY_CREATE) && isValidFile;
          boolean isValidModifyEvent      = (watchEvent.kind() == StandardWatchEventKinds.ENTRY_MODIFY) && isValidFile;
          boolean isFileCheckedForLocking = ctx.hasCheckedFileForLocking(srcPath.toFile());
 
          if (isValidModifyEvent && !isFileCheckedForLocking) {
+            LOG.debug("Event... kind={}, count={}, context={} path={}", watchEvent.kind(), watchEvent.count(),
+                      watchEvent.context(),
+                      srcPath.toFile().getAbsolutePath());
+
             processModifyEvent(queuedKey, watchEvent);
          } else if (isValidModifyEvent && isFileCheckedForLocking) {
             ctx.removeCheckedFileForLocking(srcPath.toFile());

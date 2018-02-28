@@ -29,16 +29,14 @@ public class FileUtil {
             int    randomInt       = randomGenerator.nextInt(100000);
             String tmpFileName     = String.format("%d.tmp_%d", System.currentTimeMillis(), randomInt);
             File   tmpFile         = new File(sourceFile.getParent() + File.separator + tmpFileName);
-            canObtainExclusiveLock = sourceFile.renameTo(tmpFile);
-            LOG.debug("File [{}] renamed to [{}].", sourceFile.getAbsolutePath(), tmpFile.getAbsolutePath());
-            canObtainExclusiveLock = canObtainExclusiveLock && tmpFile.renameTo(sourceFile);
+            canObtainExclusiveLock = sourceFile.renameTo(tmpFile) && tmpFile.renameTo(sourceFile);
+
             if (canObtainExclusiveLock) {
                ctx.addCheckedFileForLocking(sourceFile);
-               LOG.debug("File [{}] can be exclusively locked.", sourceFile.getAbsolutePath());
+               LOG.info("File [{}] can be exclusively LOCKED.", sourceFile.getAbsolutePath());
             } else {
-               LOG.debug("File [{}] can NOT be exclusively locked.", sourceFile.getAbsolutePath());
+               LOG.warn("File [{}] can NOT be exclusively LOCKED.", sourceFile.getAbsolutePath());
             }
-
          } catch (Exception e) {
             LOG.error("Error when canObtainExclusiveLock: {}", e);
          }

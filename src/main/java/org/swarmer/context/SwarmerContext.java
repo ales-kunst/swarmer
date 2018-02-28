@@ -14,12 +14,12 @@ import java.util.List;
  * @author aq
  */
 public class SwarmerContext {
-   private static final Logger LOG = LogManager.getLogger(SwarmerContext.class);
-
+   private static final Logger         LOG               = LogManager.getLogger(SwarmerContext.class);
+   private final static String         LOCK_WAIT_TIMEOUT = "lock.wait.timeout";
    /**
     * Instance of SwarmerContext.
     */
-   private static SwarmerContext ctxInstance = null;
+   private static       SwarmerContext ctxInstance       = null;
 
    /**
     * Create SwarmContext builder.
@@ -63,6 +63,16 @@ public class SwarmerContext {
          names[index] = swarmInstanceData.getName();
       }
       return names;
+   }
+
+   public int getLockWaitTimeout() {
+      int    lockWaitTimeout      = 3000;
+      String lockWaitTimeoutValue = defaultSection.get(LOCK_WAIT_TIMEOUT);
+      if (lockWaitTimeoutValue != null) {
+         lockWaitTimeout = Integer.valueOf(lockWaitTimeoutValue);
+      }
+
+      return lockWaitTimeout;
    }
 
    public SwarmConfig[] getSwarmConfigs() {

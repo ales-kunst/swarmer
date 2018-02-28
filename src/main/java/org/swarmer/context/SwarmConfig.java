@@ -38,7 +38,7 @@ public class SwarmConfig {
    public final boolean matchesFilePattern(String fileName) {
       String  pattern = getFilenamePatternFromIni();
       boolean matches = fileName.matches(pattern);
-      LOG.debug("Using pattern {} on filename {} [match: {}].", pattern, fileName, matches);
+      LOG.trace("Using pattern {} on filename {} [match: {}].", pattern, fileName, matches);
       return matches;
    }
 

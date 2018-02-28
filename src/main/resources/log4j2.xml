@@ -9,7 +9,7 @@
     <Root level="TRACE">
       <AppenderRef ref="Console" />
     </Root>
-    <logger name="org.swarmer" level="ALL" additivity="false">
+    <logger name="org.swarmer" level="DEBUG" additivity="false">
       <AppenderRef ref="Console" />
     </logger>
   </Loggers>
