@@ -14,7 +14,7 @@ public class SwarmerContextRetriever {
 
    public static final String DEFAULT_SECTION_NAME = "default";
 
-   private static final Logger LOG = LogManager.getLogger(SwarmConfig.class);
+   private static final Logger LOG = LogManager.getLogger(SwarmerContextRetriever.class);
 
    /**
     * @param iniFilePathname

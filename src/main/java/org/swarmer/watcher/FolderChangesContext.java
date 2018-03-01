@@ -30,12 +30,12 @@ public class FolderChangesContext {
          Integer refValue = checkedFilesForLockingRef.get(fileToRemoveFromList);
          ++refValue;
          checkedFilesForLockingRef.put(fileToRemoveFromList, refValue);
-         LOG.debug("Increased element value [{} -> {}] in checkedFilesForLocking collection.",
+         LOG.trace("Increased element value [{} -> {}] in checkedFilesForLocking collection.",
                    fileToRemoveFromList, refValue);
       } else {
          checkedFilesForLockingRef.put(checkedFile, INITIAL_REF_VALUE);
          wasAdded = true;
-         LOG.debug("Added element value [{} -> {}] to checkedFilesForLocking collection.",
+         LOG.trace("Added element value [{} -> {}] to checkedFilesForLocking collection.",
                    checkedFile, INITIAL_REF_VALUE);
       }
 
@@ -85,14 +85,14 @@ public class FolderChangesContext {
       if (fileToRemoveFromList != null) {
          Integer refValue = checkedFilesForLockingRef.get(fileToRemoveFromList);
          if (refValue.equals(INITIAL_REF_VALUE)) {
-            LOG.debug("Removed element [{} -> {}] from checkedFilesForLocking collection.", fileToRemoveFromList,
+            LOG.trace("Removed element [{} -> {}] from checkedFilesForLocking collection.", fileToRemoveFromList,
                       refValue);
             checkedFilesForLockingRef.remove(fileToRemoveFromList);
             wasRemoved = true;
          } else {
             --refValue;
             checkedFilesForLockingRef.put(fileToRemoveFromList, refValue);
-            LOG.debug("Decreased element value [{} -> {}] from checkedFilesForLocking collection.",
+            LOG.trace("Decreased element value [{} -> {}] from checkedFilesForLocking collection.",
                       fileToRemoveFromList, refValue);
          }
       }

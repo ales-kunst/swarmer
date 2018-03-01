@@ -2,7 +2,7 @@
 <Configuration>
   <Appenders>
     <Console name="Console">
-      <PatternLayout pattern="[%-5level][XML] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n" />
+      <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-30c{1} - %msg%n"/>
     </Console>
   </Appenders>
   <Loggers>

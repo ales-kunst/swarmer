@@ -33,9 +33,9 @@ public class FileUtil {
 
             if (canObtainExclusiveLock) {
                ctx.addCheckedFileForLocking(sourceFile);
-               LOG.info("File [{}] can be exclusively LOCKED.", sourceFile.getAbsolutePath());
+               LOG.info("File [{}] EXCLUSIVELY LOCKED.", sourceFile.getAbsolutePath());
             } else {
-               LOG.warn("File [{}] can NOT be exclusively LOCKED.", sourceFile.getAbsolutePath());
+               LOG.warn("File [{}] NOT EXCLUSIVELY LOCKED.", sourceFile.getAbsolutePath());
             }
          } catch (Exception e) {
             LOG.error("Error when canObtainExclusiveLock: {}", e);
@@ -78,7 +78,7 @@ public class FileUtil {
       }
 
       try {
-         LOG.info("Started copying file [{} -> {}]", source.getAbsolutePath(), target.getAbsolutePath());
+         LOG.info("*** Started copying file [{} -> {}] ***", source.getAbsolutePath(), target.getAbsolutePath());
          inStream = new FileInputStream(source);
          outStream = new FileOutputStream(target);
          inChannel = inStream.getChannel();
@@ -92,7 +92,7 @@ public class FileUtil {
             }
             buffer.clear();
          }
-         LOG.info("Ended copying file [{} -> {}]", source.getAbsolutePath(), target.getAbsolutePath());
+         LOG.info("*** Ended copying file [{} -> {}] ***", source.getAbsolutePath(), target.getAbsolutePath());
          isCopySuccess = true;
       } catch (IOException e) {
          LOG.error("Error at nioBufferCopy when copying file [{} -> {}]: ", source.getAbsolutePath(),

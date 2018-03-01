@@ -10,6 +10,7 @@ import org.swarmer.util.FileUtil;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.List;
 
 public class FolderChangesWatcher {
 
@@ -42,8 +43,18 @@ public class FolderChangesWatcher {
       return watchEventFolder.resolve(watchEventFile);
    }
 
+   private String getWatchEventsInfo(WatchKey queuedKey, List<WatchEvent<?>> pollEvents) {
+      StringBuilder sb = new StringBuilder();
+      for (WatchEvent<?> watchEvent : pollEvents) {
+         Path srcPath = getFullPath(queuedKey, watchEvent);
+         sb.append(String.format("| %s : %s ", watchEvent.kind(), srcPath));
+      }
+      sb.append("|");
+
+      return sb.toString();
+   }
+
    private void processModifyEvent(WatchKey queuedKey, WatchEvent<?> watchEvent) throws IOException {
-      final int MAX_ITEARTIONS = 5;
       Path      srcPath        = getFullPath(queuedKey, watchEvent);
       Path      destPath       = getDestPath(queuedKey, watchEvent);
 
@@ -56,12 +67,13 @@ public class FolderChangesWatcher {
          } catch (InterruptedException e) {}
          canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath, ctx);
       }
-      // Dest file should not be present because it should be deleted before copying
-      boolean destFileExists         = destPath.toFile().exists() ? !FileUtil.removeFile(destPath) : false;
+      // Remove Dest file only if it exists and src file can be locked
+      boolean destFileExists =
+              (destPath.toFile().exists() && canSrcFileBeLocked) ? !FileUtil.removeFile(destPath) : false;
       boolean fileAccessConditionsOk = canSrcFileBeLocked && !destFileExists;
 
       if (!canSrcFileBeLocked) {
-         LOG.error("File not copied because source file can not be locked.");
+         LOG.warn("File not copied because source file can not be locked.");
       } else if (destFileExists) {
          LOG.error("Destination file [{}] is locked by another process.", destPath);
       } else if (fileAccessConditionsOk) {
@@ -72,7 +84,13 @@ public class FolderChangesWatcher {
    }
 
    private void processWatchEvents(WatchKey queuedKey) throws IOException {
-      for (WatchEvent<?> watchEvent : queuedKey.pollEvents()) {
+      // If we do it in this way then we poll current events and remove them from list. Must be done in such a way
+      // because every call to this function gets fresh list from event list. Do NOT put queuedKey.pollEvents() in the
+      // for loop (e.g. for (WatchEvent<?> watchEvent : queuedKey.pollEvents()) {})
+      List<WatchEvent<?>> pollEvents = queuedKey.pollEvents();
+      LOG.info("Started polling watch events [size: {}]: {}", pollEvents.size(),
+               getWatchEventsInfo(queuedKey, pollEvents));
+      for (WatchEvent<?> watchEvent : pollEvents) {
          Path srcPath = getFullPath(queuedKey, watchEvent);
 
          String  srcFilename             = srcPath.toFile().getName();
@@ -82,16 +100,18 @@ public class FolderChangesWatcher {
          boolean isValidModifyEvent      = (watchEvent.kind() == StandardWatchEventKinds.ENTRY_MODIFY) && isValidFile;
          boolean isFileCheckedForLocking = ctx.hasCheckedFileForLocking(srcPath.toFile());
 
-         if (isValidModifyEvent && !isFileCheckedForLocking) {
+         if (isValidModifyEvent) {
             LOG.debug("Event... kind={}, count={}, context={} path={}", watchEvent.kind(), watchEvent.count(),
                       watchEvent.context(),
                       srcPath.toFile().getAbsolutePath());
-
+         }
+         if (isValidModifyEvent && !isFileCheckedForLocking) {
             processModifyEvent(queuedKey, watchEvent);
          } else if (isValidModifyEvent && isFileCheckedForLocking) {
             ctx.removeCheckedFileForLocking(srcPath.toFile());
          }
       }
+      LOG.info("Ended polling watch events [size: {}]\n", pollEvents.size());
    }
 
    private void registerFolders(WatchService watchService) throws IOException {
@@ -99,11 +119,10 @@ public class FolderChangesWatcher {
       for (SwarmInstanceData swarmInstance : swarmInstances) {
          File srcFolder = swarmInstance.getSourcePath();
          if (srcFolder.exists() && srcFolder.isDirectory()) {
-            Path path = srcFolder.toPath();
-            WatchKey key = path.register(watchService, StandardWatchEventKinds.ENTRY_CREATE,
-                                         StandardWatchEventKinds.ENTRY_MODIFY,
-                                         StandardWatchEventKinds.ENTRY_DELETE);
+            Path     srcPath = srcFolder.toPath();
+            WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
             ctx.addSwarmInstance(key, swarmInstance);
+            LOG.info("Registered folder [{}] for watch.", srcFolder);
          } else {
             String msg = String.format("Folder [%s] does not exist!", srcFolder.getAbsolutePath());
             LOG.error(msg);
@@ -124,11 +143,20 @@ public class FolderChangesWatcher {
 
    private void watchLoop(WatchService watchService) throws IOException, InterruptedException {
       registerFolders(watchService);
-      LOG.info("Folder changes watcher started.");
+      boolean folderChangesStarted = false;
       while (true) {
+         if (!folderChangesStarted) {
+            LOG.info("Folder changes watcher started.");
+            folderChangesStarted = true;
+         }
+
          WatchKey queuedKey = watchService.take();
 
-         processWatchEvents(queuedKey);
+         try {
+            processWatchEvents(queuedKey);
+         } catch (Exception e) {
+            LOG.error("Exception from processWatchEvents: [{}]. Continue with watch.", e.getMessage());
+         }
 
          if (!queuedKey.reset()) {
             LOG.info("Removed WatchKey {}.", queuedKey.toString());
