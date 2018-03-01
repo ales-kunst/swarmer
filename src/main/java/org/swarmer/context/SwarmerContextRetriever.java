@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
+import org.swarmer.util.ValidationException;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,12 +17,7 @@ public class SwarmerContextRetriever {
 
    private static final Logger LOG = LogManager.getLogger(SwarmerContextRetriever.class);
 
-   /**
-    * @param iniFilePathname
-    * @return
-    * @throws IOException
-    */
-   public static SwarmerContext retrieve(String iniFilePathname) throws IOException {
+   public static SwarmerContext retrieve(String iniFilePathname) throws IOException, ValidationException {
       File iniFile = new File(iniFilePathname);
 
       if (!iniFile.exists()) {
@@ -40,6 +36,7 @@ public class SwarmerContextRetriever {
             swarmerBuilder.setDefaultSection(section);
          } else {
             SwarmInstanceData swarmInstance = new SwarmInstanceData(new SwarmConfig(section));
+            swarmInstance.isValid();
             swarmerBuilder.addSwarmInstanceData(swarmInstance);
          }
       }
