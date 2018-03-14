@@ -58,14 +58,14 @@ public class FolderChangesWatcher {
       Path      srcPath        = getFullPath(queuedKey, watchEvent);
       Path      destPath       = getDestPath(queuedKey, watchEvent);
 
-      boolean canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath, ctx);
+      boolean canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
 
       if (!canSrcFileBeLocked) {
          try {
             LOG.trace("Sleep for {} ms", SwarmerContext.instance().getLockWaitTimeout());
             Thread.sleep(SwarmerContext.instance().getLockWaitTimeout());
          } catch (InterruptedException e) {}
-         canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath, ctx);
+         canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
       }
       // Remove Dest file only if it exists and src file can be locked
       boolean destFileExists =
@@ -77,6 +77,7 @@ public class FolderChangesWatcher {
       } else if (destFileExists) {
          LOG.error("Destination file [{}] is locked by another process.", destPath);
       } else if (fileAccessConditionsOk) {
+         ctx.addCheckedFileForLocking(srcPath.toFile());
          LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
                   srcPath.toFile().length());
          FileUtil.nioBufferCopy(srcPath.toFile(), destPath.toFile());

@@ -17,7 +17,7 @@ public class FileUtil {
 
    private static final Logger LOG = LogManager.getLogger(FileUtil.class);
 
-   public static boolean canObtainExclusiveLock(Path source, FolderChangesContext ctx) {
+   public static boolean canObtainExclusiveLock(Path source) {
       boolean canObtainExclusiveLock = false;
       File    sourceFile             = source != null ? source.toFile() : null;
 
@@ -32,7 +32,6 @@ public class FileUtil {
             canObtainExclusiveLock = sourceFile.renameTo(tmpFile) && tmpFile.renameTo(sourceFile);
 
             if (canObtainExclusiveLock) {
-               ctx.addCheckedFileForLocking(sourceFile);
                LOG.info("File [{}] EXCLUSIVELY LOCKED.", sourceFile.getAbsolutePath());
             } else {
                LOG.warn("File [{}] NOT EXCLUSIVELY LOCKED.", sourceFile.getAbsolutePath());
