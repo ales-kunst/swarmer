@@ -2,22 +2,23 @@ package org.swarmer.context;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.swarmer.util.ExceptionThrower;
 import org.swarmer.util.ValidationException;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
-public class SwarmInstanceData {
+public class SwarmDeployment {
 
-   private static final Logger LOG = LogManager.getLogger(SwarmInstanceData.class);
+   private static final Logger LOG = LogManager.getLogger(SwarmDeployment.class);
 
-   private final SwarmConfig swarmConfig;
-   private       long        numOfErrors;
-   private       long        numOfWarnings;
+   private final SwarmConfig     swarmConfig;
+   private       List<SwarmFile> swarmFilesQueue;
 
-   public SwarmInstanceData(SwarmConfig swarmConfig) {
+   public SwarmDeployment(SwarmConfig swarmConfig) {
       this.swarmConfig = swarmConfig;
-      numOfErrors = 0;
-      numOfWarnings = 0;
+      this.swarmFilesQueue = new ArrayList<>();
    }
 
    public final String getName() {
@@ -34,16 +35,21 @@ public class SwarmInstanceData {
       return getSwarmConfig().getTargetPath();
    }
 
+   public SwarmFile addSwarmFile(File file, SwarmFile.State fileState, long fileSize) {
+      SwarmFile swarmFile = new SwarmFile(file, fileState, fileSize);
+      swarmFilesQueue.add(swarmFile);
+      return swarmFile;
+   }
+
    public void isValid() throws ValidationException {
       StringBuilder errMsgs = new StringBuilder();
       if (getSourcePath().getAbsolutePath().equalsIgnoreCase(getTargetPath().getAbsolutePath())) {
          errMsgs.append(String.format("Source and target folder are same [%s = %s]", getSourcePath(), getTargetPath()));
       }
-      ;
 
       // Only throw error if there are no text messages in the string builder.
       if (!errMsgs.toString().isEmpty()) {
-         throw new ValidationException(errMsgs.toString());
+         ExceptionThrower.throwValidationException(errMsgs.toString());
       }
    }
 

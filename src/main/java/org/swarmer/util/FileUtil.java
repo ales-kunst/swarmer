@@ -2,7 +2,6 @@ package org.swarmer.util;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.swarmer.watcher.FolderChangesContext;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -45,12 +44,6 @@ public class FileUtil {
       return canObtainExclusiveLock;
    }
 
-   /**
-    * Closes closeable object.
-    *
-    * @param closable
-    * @return Returns true if closing was successful, otherwise false.
-    */
    public static boolean close(Closeable closable) {
       boolean isSuccessfull = false;
       if (closable != null) {
@@ -64,7 +57,11 @@ public class FileUtil {
       return isSuccessfull;
    }
 
-   public static boolean nioBufferCopy(File source, File target) {
+   public static CopyProgress createCopyProgress(long fileLength) {
+      return new CopyProgress(fileLength);
+   }
+
+   public static boolean nioBufferCopy(File source, File target, CopyProgress copyProgress) {
       boolean          isCopySuccess = false;
       FileInputStream  inStream      = null;
       FileOutputStream outStream     = null;
@@ -83,13 +80,17 @@ public class FileUtil {
          inChannel = inStream.getChannel();
          outChannel = outStream.getChannel();
 
-         ByteBuffer buffer = ByteBuffer.allocateDirect(8192);
-         while (inChannel.read(buffer) != -1) {
+         ByteBuffer buffer    = ByteBuffer.allocateDirect(8192);
+         int        bytesRead = 0;
+         while ((bytesRead = inChannel.read(buffer)) != -1) {
             buffer.flip();
             while (buffer.hasRemaining()) {
                outChannel.write(buffer);
             }
             buffer.clear();
+            if (copyProgress != null) {
+               copyProgress.addBytesRead(bytesRead);
+            }
          }
          LOG.info("*** Ended copying file [{} -> {}] ***", source.getAbsolutePath(), target.getAbsolutePath());
          isCopySuccess = true;
@@ -120,6 +121,20 @@ public class FileUtil {
       }
 
       return success;
+   }
+
+   public static class CopyProgress {
+      private long bytesCopied;
+      private long fileLength;
+
+      protected CopyProgress(long fileLength) {
+         this.fileLength = fileLength;
+         this.bytesCopied = 0;
+      }
+
+      public long addBytesRead(long bytesWritten) {
+         return bytesCopied += bytesWritten;
+      }
    }
 
 }

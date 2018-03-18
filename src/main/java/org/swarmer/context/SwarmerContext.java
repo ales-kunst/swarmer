@@ -7,67 +7,45 @@ import org.ini4j.Ini;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * SwarmContext is singleton in the system and holds list of swarm instances which were
- * started by our Swarmer.
- *
- * @author aq
- */
+
 public class SwarmerContext {
-   private static final Logger         LOG               = LogManager.getLogger(SwarmerContext.class);
-   private final static String         LOCK_WAIT_TIMEOUT = "lock.wait.timeout";
-   /**
-    * Instance of SwarmerContext.
-    */
-   private static       SwarmerContext ctxInstance       = null;
+   private static final Logger         LOG                       = LogManager.getLogger(SwarmerContext.class);
+   private static final String         SETTING_JAVA_PATH         = "java.path";
+   private static final String         SETTING_LOCK_WAIT_TIMEOUT = "lock.wait.timeout";
+   private static       SwarmerContext ctxInstance               = null;
 
-   /**
-    * Create SwarmContext builder.
-    *
-    * @return SwarmerContextBuilder object.
-    */
-   static Builder newBuilder() {
-      return new Builder();
-   }
-
-   /**
-    * @return
-    */
    public static SwarmerContext instance() {
       return ctxInstance;
+   }
+
+   static Builder newBuilder() {
+      return new Builder();
    }
 
    static void reset(SwarmerContext ctxInstance) {
       SwarmerContext.ctxInstance = ctxInstance;
    }
 
-   /**
-    * List of SwarmInstanceData objects.
-    */
-   protected List<SwarmInstanceData> swarmInstances;
-   protected Ini.Section             defaultSection;
+   protected Ini.Section           defaultSection;
+   protected List<SwarmDeployment> swarmDeployments;
 
    private SwarmerContext() {
-      this.swarmInstances = new ArrayList<SwarmInstanceData>();
+      this.swarmDeployments = new ArrayList<SwarmDeployment>();
    }
 
    private SwarmerContext(Builder builder) {
-      this.swarmInstances = builder.swarmInstances;
+      this.swarmDeployments = builder.swarmDeployments;
       this.defaultSection = builder.defaultSection;
    }
 
-   public String[] getSwarmNames() {
-      String[] names = new String[swarmInstances.size()];
-      for (int index = 0; index < swarmInstances.size(); index++) {
-         SwarmInstanceData swarmInstanceData = swarmInstances.get(index);
-         names[index] = swarmInstanceData.getName();
-      }
-      return names;
+   public String getJavaPath() {
+      String javaPathValue = defaultSection.get(SETTING_JAVA_PATH);
+      return javaPathValue;
    }
 
    public int getLockWaitTimeout() {
       int    lockWaitTimeout      = 3000;
-      String lockWaitTimeoutValue = defaultSection.get(LOCK_WAIT_TIMEOUT);
+      String lockWaitTimeoutValue = defaultSection.get(SETTING_LOCK_WAIT_TIMEOUT);
       if (lockWaitTimeoutValue != null) {
          lockWaitTimeout = Integer.valueOf(lockWaitTimeoutValue);
       }
@@ -75,44 +53,29 @@ public class SwarmerContext {
       return lockWaitTimeout;
    }
 
-   public SwarmConfig[] getSwarmConfigs() {
-      SwarmConfig[] swarmConfigs = new SwarmConfig[swarmInstances.size()];
-      for (int index = 0; index < swarmInstances.size(); index++) {
-         SwarmInstanceData swarmInstanceData = swarmInstances.get(index);
-         swarmConfigs[index] = swarmInstanceData.getSwarmConfig();
-      }
-      return swarmConfigs;
+   public SwarmDeployment[] getSwarmDeployments() {
+      SwarmDeployment[] resultArray = new SwarmDeployment[swarmDeployments.size()];
+      return swarmDeployments.toArray(resultArray);
    }
 
-   public SwarmInstanceData[] getSwarmInstances() {
-      SwarmInstanceData[] resultArray = new SwarmInstanceData[swarmInstances.size()];
-      return  swarmInstances.toArray(resultArray);
-   }
-
-   /**
-    * Help for building SwarmerContext in more concise
-    * way.
-    *
-    * @author kun01826
-    */
    public static class Builder extends SwarmerContext {
 
       private Builder() {
          super();
       }
 
-      public Builder addSwarmInstanceData(SwarmInstanceData swarmInstanceData) {
-         super.swarmInstances.add(swarmInstanceData);
-         return this;
-      }
-
-      public Builder setDefaultSection(Ini.Section defaultSection) {
-         super.defaultSection = defaultSection;
+      public Builder addSwarmDeployment(SwarmDeployment swarmDeployment) {
+         super.swarmDeployments.add(swarmDeployment);
          return this;
       }
 
       public SwarmerContext build() {
          return new SwarmerContext(this);
+      }
+
+      public Builder setDefaultSection(Ini.Section defaultSection) {
+         super.defaultSection = defaultSection;
+         return this;
       }
 
    }

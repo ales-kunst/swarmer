@@ -35,9 +35,9 @@ public class SwarmerContextRetriever {
          if (DEFAULT_SECTION_NAME.equalsIgnoreCase(section.getName())) {
             swarmerBuilder.setDefaultSection(section);
          } else {
-            SwarmInstanceData swarmInstance = new SwarmInstanceData(new SwarmConfig(section));
-            swarmInstance.isValid();
-            swarmerBuilder.addSwarmInstanceData(swarmInstance);
+            SwarmDeployment swarmDeployment = new SwarmDeployment(new SwarmConfig(section));
+            swarmDeployment.isValid();
+            swarmerBuilder.addSwarmDeployment(swarmDeployment);
          }
       }
       SwarmerContext.reset(swarmerBuilder.build());

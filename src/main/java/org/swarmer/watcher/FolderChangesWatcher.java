@@ -3,7 +3,8 @@ package org.swarmer.watcher;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.swarmer.context.SwarmConfig;
-import org.swarmer.context.SwarmInstanceData;
+import org.swarmer.context.SwarmDeployment;
+import org.swarmer.context.SwarmFile;
 import org.swarmer.context.SwarmerContext;
 import org.swarmer.util.FileUtil;
 
@@ -16,10 +17,12 @@ public class FolderChangesWatcher {
 
    private static final Logger LOG = LogManager.getLogger(FolderChangesWatcher.class);
 
-   private FolderChangesContext ctx;
+   private FolderChangesContext folderChangesCtx;
+   private WatchService         watchService;
 
    public FolderChangesWatcher() {
-      ctx = new FolderChangesContext();
+      folderChangesCtx = null;
+      watchService = null;
    }
 
    private WatchService createDefaultWatchService() throws IOException {
@@ -30,7 +33,7 @@ public class FolderChangesWatcher {
       // this is not a complete path
       Path file = (Path) watchEvent.context();
       // need to get parent path
-      SwarmConfig swarmConfig = ctx.getSwarmConfig(queuedKey);
+      SwarmConfig swarmConfig = folderChangesCtx.getSwarmConfig(queuedKey);
       Path        parentPath  = swarmConfig.getTargetPath().toPath();
 
       return parentPath.resolve(file);
@@ -54,9 +57,14 @@ public class FolderChangesWatcher {
       return sb.toString();
    }
 
+   private void initializeWatcher() throws IOException {
+      folderChangesCtx = new FolderChangesContext();
+      watchService = createDefaultWatchService();
+   }
+
    private void processModifyEvent(WatchKey queuedKey, WatchEvent<?> watchEvent) throws IOException {
-      Path      srcPath        = getFullPath(queuedKey, watchEvent);
-      Path      destPath       = getDestPath(queuedKey, watchEvent);
+      Path srcPath  = getFullPath(queuedKey, watchEvent);
+      Path destPath = getDestPath(queuedKey, watchEvent);
 
       boolean canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
 
@@ -77,10 +85,20 @@ public class FolderChangesWatcher {
       } else if (destFileExists) {
          LOG.error("Destination file [{}] is locked by another process.", destPath);
       } else if (fileAccessConditionsOk) {
-         ctx.addCheckedFileForLocking(srcPath.toFile());
+         folderChangesCtx.addCheckedFileForLocking(srcPath.toFile());
          LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
                   srcPath.toFile().length());
-         FileUtil.nioBufferCopy(srcPath.toFile(), destPath.toFile());
+         SwarmDeployment swarmDeployment = folderChangesCtx.getSwarmDeployment(queuedKey);
+         long            fileSize        = srcPath.toFile().length();
+         SwarmFile swarmFile = swarmDeployment
+                 .addSwarmFile(destPath.toFile(), SwarmFile.State.COPYING, fileSize);
+         try {
+            FileUtil.nioBufferCopy(srcPath.toFile(), destPath.toFile(), swarmFile.getCopyProgress());
+         } catch (Exception e) {
+            swarmFile.addState(SwarmFile.State.ERROR_COPYING, e);
+            throw e;
+         }
+         swarmFile.addState(SwarmFile.State.COPIED);
       }
    }
 
@@ -96,33 +114,34 @@ public class FolderChangesWatcher {
 
          String  srcFilename             = srcPath.toFile().getName();
          boolean isFile                  = srcPath.toFile().isFile();
-         boolean fileMatchesPattern      = ctx.getSwarmConfig(queuedKey).matchesFilePattern(srcFilename);
+         boolean fileMatchesPattern      = folderChangesCtx.getSwarmConfig(queuedKey).matchesFilePattern(srcFilename);
          boolean isValidFile             = isFile && fileMatchesPattern;
          boolean isValidModifyEvent      = (watchEvent.kind() == StandardWatchEventKinds.ENTRY_MODIFY) && isValidFile;
-         boolean isFileCheckedForLocking = ctx.hasCheckedFileForLocking(srcPath.toFile());
+         boolean isFileCheckedForLocking = folderChangesCtx.hasCheckedFileForLocking(srcPath.toFile());
 
          if (isValidModifyEvent) {
             LOG.debug("Event... kind={}, count={}, context={} path={}", watchEvent.kind(), watchEvent.count(),
                       watchEvent.context(),
                       srcPath.toFile().getAbsolutePath());
          }
+
          if (isValidModifyEvent && !isFileCheckedForLocking) {
             processModifyEvent(queuedKey, watchEvent);
          } else if (isValidModifyEvent && isFileCheckedForLocking) {
-            ctx.removeCheckedFileForLocking(srcPath.toFile());
+            folderChangesCtx.removeCheckedFileForLocking(srcPath.toFile());
          }
       }
       LOG.info("Ended polling watch events [size: {}]\n", pollEvents.size());
    }
 
-   private void registerFolders(WatchService watchService) throws IOException {
-      SwarmInstanceData[] swarmInstances = SwarmerContext.instance().getSwarmInstances();
-      for (SwarmInstanceData swarmInstance : swarmInstances) {
+   private void registerFolders() throws IOException {
+      SwarmDeployment[] swarmInstances = SwarmerContext.instance().getSwarmDeployments();
+      for (SwarmDeployment swarmInstance : swarmInstances) {
          File srcFolder = swarmInstance.getSourcePath();
          if (srcFolder.exists() && srcFolder.isDirectory()) {
             Path     srcPath = srcFolder.toPath();
             WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
-            ctx.addSwarmInstance(key, swarmInstance);
+            folderChangesCtx.addSwarmDeployment(key, swarmInstance);
             LOG.info("Registered folder [{}] for watch.", srcFolder);
          } else {
             String msg = String.format("Folder [%s] does not exist!", srcFolder.getAbsolutePath());
@@ -132,18 +151,18 @@ public class FolderChangesWatcher {
       }
    }
 
-   public void start() throws IOException, InterruptedException {
-      WatchService watchService = createDefaultWatchService();
+   public void watch() throws IOException, InterruptedException {
+      initializeWatcher();
+      registerFolders();
       try {
          watchLoop(watchService);
       } finally {
          watchService.close();
-         ctx.reset();
+         folderChangesCtx.reset();
       }
    }
 
-   private void watchLoop(WatchService watchService) throws IOException, InterruptedException {
-      registerFolders(watchService);
+   private void watchLoop(WatchService watchService) throws InterruptedException {
       boolean folderChangesStarted = false;
       while (true) {
          if (!folderChangesStarted) {
@@ -161,9 +180,9 @@ public class FolderChangesWatcher {
 
          if (!queuedKey.reset()) {
             LOG.info("Removed WatchKey {}.", queuedKey.toString());
-            ctx.remove(queuedKey);
+            folderChangesCtx.remove(queuedKey);
          }
-         if (ctx.isEmpty()) {
+         if (folderChangesCtx.isEmpty()) {
             LOG.info("Folder changes map is empty. Going out of loop for folder changes watching.",
                      queuedKey.toString());
             break;

@@ -3,7 +3,6 @@ package org.swarmer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.swarmer.context.SwarmerContextRetriever;
-import org.swarmer.watcher.FolderChangesWatcher;
 
 
 public class Main {
@@ -14,8 +13,14 @@ public class Main {
       try {
          LOG.info("Program started!!!");
          SwarmerContextRetriever.retrieve(SwarmerInputParams.iniFilePath());
-         FolderChangesWatcher folderChangesWatcher = new FolderChangesWatcher();
-         folderChangesWatcher.start();
+
+         FolderChangesWatcherRunner folderChangesWatcherRunner = new FolderChangesWatcherRunner();
+         Thread                     watherThread               = folderChangesWatcherRunner.getThread();
+         watherThread.start();
+
+
+         watherThread.join();
+
       } catch (Exception e) {
          LOG.error("Swarmer ended with error: {}", e);
       }

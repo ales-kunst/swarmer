@@ -3,7 +3,7 @@ package org.swarmer.watcher;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.swarmer.context.SwarmConfig;
-import org.swarmer.context.SwarmInstanceData;
+import org.swarmer.context.SwarmDeployment;
 
 import java.io.File;
 import java.nio.file.WatchKey;
@@ -15,11 +15,11 @@ public class FolderChangesContext {
    private final static Integer INITIAL_REF_VALUE = 1;
    private static final Logger  LOG               = LogManager.getLogger(FolderChangesContext.class);
 
-   private Map<File, Integer>               checkedFilesForLockingRef;
-   private Map<WatchKey, SwarmInstanceData> watchKeySwarmInstanceMap;
+   private Map<File, Integer>             checkedFilesForLockingRef;
+   private Map<WatchKey, SwarmDeployment> watchKeySwarmDeploymentMap;
 
    public FolderChangesContext() {
-      watchKeySwarmInstanceMap = new HashMap<>();
+      watchKeySwarmDeploymentMap = new HashMap<>();
       checkedFilesForLockingRef = new HashMap<>();
    }
 
@@ -42,8 +42,12 @@ public class FolderChangesContext {
       return wasAdded;
    }
 
-   public void addSwarmInstance(WatchKey key, SwarmInstanceData swarmInstanceData) {
-      watchKeySwarmInstanceMap.put(key, swarmInstanceData);
+   public void addSwarmDeployment(WatchKey key, SwarmDeployment swarmDeployment) {
+      watchKeySwarmDeploymentMap.put(key, swarmDeployment);
+   }
+
+   public SwarmDeployment getSwarmDeployment(WatchKey key) {
+      return watchKeySwarmDeploymentMap.get(key);
    }
 
    public File findCheckedFileForLocking(File checkedFile) {
@@ -63,8 +67,8 @@ public class FolderChangesContext {
       return getSwarmInstance(key).getSwarmConfig();
    }
 
-   public SwarmInstanceData getSwarmInstance(WatchKey key) {
-      return watchKeySwarmInstanceMap.get(key);
+   public SwarmDeployment getSwarmInstance(WatchKey key) {
+      return watchKeySwarmDeploymentMap.get(key);
    }
 
    public boolean hasCheckedFileForLocking(File checkedFile) {
@@ -72,11 +76,11 @@ public class FolderChangesContext {
    }
 
    public boolean isEmpty() {
-      return watchKeySwarmInstanceMap.isEmpty();
+      return watchKeySwarmDeploymentMap.isEmpty();
    }
 
-   public SwarmInstanceData remove(WatchKey key) {
-      return watchKeySwarmInstanceMap.remove(key);
+   public SwarmDeployment remove(WatchKey key) {
+      return watchKeySwarmDeploymentMap.remove(key);
    }
 
    public boolean removeCheckedFileForLocking(File checkedFile) {
@@ -100,10 +104,10 @@ public class FolderChangesContext {
    }
 
    public void reset() {
-      Iterator<Map.Entry<WatchKey, SwarmInstanceData>> entryIterator = watchKeySwarmInstanceMap.entrySet().iterator();
+      Iterator<Map.Entry<WatchKey, SwarmDeployment>> entryIterator = watchKeySwarmDeploymentMap.entrySet().iterator();
 
       while (entryIterator.hasNext()) {
-         Map.Entry<WatchKey, SwarmInstanceData> entry = entryIterator.next();
+         Map.Entry<WatchKey, SwarmDeployment> entry = entryIterator.next();
          entryIterator.remove();
       }
    }
