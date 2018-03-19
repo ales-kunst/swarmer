@@ -3,7 +3,7 @@ package org.swarmer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.swarmer.context.SwarmerContext;
-import org.swarmer.util.ExceptionThrower;
+import org.swarmer.exception.ExceptionThrower;
 
 public abstract class Runner implements Runnable {
    private static final Logger LOG = LogManager.getLogger(Runner.class);

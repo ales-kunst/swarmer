@@ -26,15 +26,15 @@ public class SwarmerContext {
       SwarmerContext.ctxInstance = ctxInstance;
    }
 
-   protected Ini.Section           defaultSection;
-   protected List<SwarmDeployment> swarmDeployments;
+   protected Ini.Section               defaultSection;
+   protected List<DeploymentContainer> deploymentContainers;
 
    private SwarmerContext() {
-      this.swarmDeployments = new ArrayList<SwarmDeployment>();
+      this.deploymentContainers = new ArrayList<DeploymentContainer>();
    }
 
    private SwarmerContext(Builder builder) {
-      this.swarmDeployments = builder.swarmDeployments;
+      this.deploymentContainers = builder.deploymentContainers;
       this.defaultSection = builder.defaultSection;
    }
 
@@ -53,9 +53,9 @@ public class SwarmerContext {
       return lockWaitTimeout;
    }
 
-   public SwarmDeployment[] getSwarmDeployments() {
-      SwarmDeployment[] resultArray = new SwarmDeployment[swarmDeployments.size()];
-      return swarmDeployments.toArray(resultArray);
+   public DeploymentContainer[] getDeploymentContainers() {
+      DeploymentContainer[] resultArray = new DeploymentContainer[deploymentContainers.size()];
+      return deploymentContainers.toArray(resultArray);
    }
 
    public static class Builder extends SwarmerContext {
@@ -64,8 +64,8 @@ public class SwarmerContext {
          super();
       }
 
-      public Builder addSwarmDeployment(SwarmDeployment swarmDeployment) {
-         super.swarmDeployments.add(swarmDeployment);
+      public Builder addDeploymentContainer(DeploymentContainer deploymentContainer) {
+         super.deploymentContainers.add(deploymentContainer);
          return this;
       }
 

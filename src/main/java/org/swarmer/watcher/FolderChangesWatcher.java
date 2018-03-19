@@ -2,8 +2,8 @@ package org.swarmer.watcher;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.swarmer.context.DeploymentContainer;
 import org.swarmer.context.SwarmConfig;
-import org.swarmer.context.SwarmDeployment;
 import org.swarmer.context.SwarmFile;
 import org.swarmer.context.SwarmerContext;
 import org.swarmer.util.FileUtil;
@@ -88,17 +88,17 @@ public class FolderChangesWatcher {
          folderChangesCtx.addCheckedFileForLocking(srcPath.toFile());
          LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
                   srcPath.toFile().length());
-         SwarmDeployment swarmDeployment = folderChangesCtx.getSwarmDeployment(queuedKey);
-         long            fileSize        = srcPath.toFile().length();
-         SwarmFile swarmFile = swarmDeployment
+         DeploymentContainer deploymentContainer = folderChangesCtx.getSwarmDeployment(queuedKey);
+         long                fileSize            = srcPath.toFile().length();
+         SwarmFile swarmFile = deploymentContainer
                  .addSwarmFile(destPath.toFile(), SwarmFile.State.COPYING, fileSize);
          try {
             FileUtil.nioBufferCopy(srcPath.toFile(), destPath.toFile(), swarmFile.getCopyProgress());
          } catch (Exception e) {
-            swarmFile.addState(SwarmFile.State.ERROR_COPYING, e);
+            swarmFile.setState(SwarmFile.State.ERROR_COPYING, e);
             throw e;
          }
-         swarmFile.addState(SwarmFile.State.COPIED);
+         swarmFile.setState(SwarmFile.State.COPIED);
       }
    }
 
@@ -135,8 +135,8 @@ public class FolderChangesWatcher {
    }
 
    private void registerFolders() throws IOException {
-      SwarmDeployment[] swarmInstances = SwarmerContext.instance().getSwarmDeployments();
-      for (SwarmDeployment swarmInstance : swarmInstances) {
+      DeploymentContainer[] swarmInstances = SwarmerContext.instance().getDeploymentContainers();
+      for (DeploymentContainer swarmInstance : swarmInstances) {
          File srcFolder = swarmInstance.getSourcePath();
          if (srcFolder.exists() && srcFolder.isDirectory()) {
             Path     srcPath = srcFolder.toPath();

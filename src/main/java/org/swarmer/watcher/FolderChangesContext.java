@@ -2,8 +2,8 @@ package org.swarmer.watcher;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.swarmer.context.DeploymentContainer;
 import org.swarmer.context.SwarmConfig;
-import org.swarmer.context.SwarmDeployment;
 
 import java.io.File;
 import java.nio.file.WatchKey;
@@ -15,8 +15,8 @@ public class FolderChangesContext {
    private final static Integer INITIAL_REF_VALUE = 1;
    private static final Logger  LOG               = LogManager.getLogger(FolderChangesContext.class);
 
-   private Map<File, Integer>             checkedFilesForLockingRef;
-   private Map<WatchKey, SwarmDeployment> watchKeySwarmDeploymentMap;
+   private Map<File, Integer>                 checkedFilesForLockingRef;
+   private Map<WatchKey, DeploymentContainer> watchKeySwarmDeploymentMap;
 
    public FolderChangesContext() {
       watchKeySwarmDeploymentMap = new HashMap<>();
@@ -42,11 +42,11 @@ public class FolderChangesContext {
       return wasAdded;
    }
 
-   public void addSwarmDeployment(WatchKey key, SwarmDeployment swarmDeployment) {
-      watchKeySwarmDeploymentMap.put(key, swarmDeployment);
+   public void addSwarmDeployment(WatchKey key, DeploymentContainer deploymentContainer) {
+      watchKeySwarmDeploymentMap.put(key, deploymentContainer);
    }
 
-   public SwarmDeployment getSwarmDeployment(WatchKey key) {
+   public DeploymentContainer getSwarmDeployment(WatchKey key) {
       return watchKeySwarmDeploymentMap.get(key);
    }
 
@@ -67,7 +67,7 @@ public class FolderChangesContext {
       return getSwarmInstance(key).getSwarmConfig();
    }
 
-   public SwarmDeployment getSwarmInstance(WatchKey key) {
+   public DeploymentContainer getSwarmInstance(WatchKey key) {
       return watchKeySwarmDeploymentMap.get(key);
    }
 
@@ -79,7 +79,7 @@ public class FolderChangesContext {
       return watchKeySwarmDeploymentMap.isEmpty();
    }
 
-   public SwarmDeployment remove(WatchKey key) {
+   public DeploymentContainer remove(WatchKey key) {
       return watchKeySwarmDeploymentMap.remove(key);
    }
 
@@ -104,10 +104,11 @@ public class FolderChangesContext {
    }
 
    public void reset() {
-      Iterator<Map.Entry<WatchKey, SwarmDeployment>> entryIterator = watchKeySwarmDeploymentMap.entrySet().iterator();
+      Iterator<Map.Entry<WatchKey, DeploymentContainer>> entryIterator = watchKeySwarmDeploymentMap.entrySet()
+                                                                                                   .iterator();
 
       while (entryIterator.hasNext()) {
-         Map.Entry<WatchKey, SwarmDeployment> entry = entryIterator.next();
+         Map.Entry<WatchKey, DeploymentContainer> entry = entryIterator.next();
          entryIterator.remove();
       }
    }

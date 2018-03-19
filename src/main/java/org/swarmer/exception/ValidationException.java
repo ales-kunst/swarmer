@@ -1,4 +1,4 @@
-package org.swarmer.util;
+package org.swarmer.exception;
 
 public class ValidationException extends Exception {
 

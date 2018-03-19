@@ -4,7 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
-import org.swarmer.util.ValidationException;
+import org.swarmer.exception.ValidationException;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,9 +35,9 @@ public class SwarmerContextRetriever {
          if (DEFAULT_SECTION_NAME.equalsIgnoreCase(section.getName())) {
             swarmerBuilder.setDefaultSection(section);
          } else {
-            SwarmDeployment swarmDeployment = new SwarmDeployment(new SwarmConfig(section));
-            swarmDeployment.isValid();
-            swarmerBuilder.addSwarmDeployment(swarmDeployment);
+            DeploymentContainer deploymentContainer = new DeploymentContainer(new SwarmConfig(section));
+            deploymentContainer.isValid();
+            swarmerBuilder.addDeploymentContainer(deploymentContainer);
          }
       }
       SwarmerContext.reset(swarmerBuilder.build());

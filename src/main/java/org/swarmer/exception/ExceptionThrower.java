@@ -1,4 +1,4 @@
-package org.swarmer.util;
+package org.swarmer.exception;
 
 public class ExceptionThrower {
 
@@ -8,6 +8,10 @@ public class ExceptionThrower {
 
    public static void throwSwarmerCtxException(String msg) throws SwarmerContextException {
       throw new SwarmerContextException(msg);
+   }
+
+   public static void throwSwarmerException(String msg) throws SwarmerException {
+      throw new SwarmerException(msg);
    }
 
    public static void throwValidationException(String msg) throws ValidationException {
