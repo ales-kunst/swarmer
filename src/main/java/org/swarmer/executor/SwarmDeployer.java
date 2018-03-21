@@ -14,14 +14,6 @@ public class SwarmDeployer {
       swarmerCtx = SwarmerContext.instance();
    }
 
-   private void sleep(long millis) {
-      try {
-         Thread.sleep(1000);
-      } catch (InterruptedException e) {
-         LOG.warn("Sleep error: []", e);
-      }
-   }
-
    public void start() {
       while (true) {
 
@@ -33,6 +25,14 @@ public class SwarmDeployer {
          }
 
          sleep(1000);
+      }
+   }
+
+   private void sleep(long millis) {
+      try {
+         Thread.sleep(1000);
+      } catch (InterruptedException e) {
+         LOG.warn("Sleep error: []", e);
       }
    }
 

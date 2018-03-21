@@ -19,6 +19,7 @@ public abstract class Runner implements Runnable {
    public Thread getThread() {
       if (thread == null) {
          thread = new Thread(this);
+         thread.setName(getName());
       }
       return thread;
    }
@@ -28,7 +29,7 @@ public abstract class Runner implements Runnable {
       try {
          runLocal();
       } catch (Exception e) {
-         LOG.error(e);
+         LOG.error("Error in run method: {}", e);
          ExceptionThrower.throwRuntimeError(e);
       }
 

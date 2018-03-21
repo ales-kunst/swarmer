@@ -3,7 +3,10 @@ package org.swarmer.util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.DirectoryNotEmptyException;
@@ -42,19 +45,6 @@ public class FileUtil {
 
 
       return canObtainExclusiveLock;
-   }
-
-   public static boolean close(Closeable closable) {
-      boolean isSuccessfull = false;
-      if (closable != null) {
-         try {
-            closable.close();
-            isSuccessfull = true;
-         } catch (IOException e) {
-            LOG.error("Error when closing [{}]: {}", closable.getClass().getName(), e);
-         }
-      }
-      return isSuccessfull;
    }
 
    public static CopyProgress createCopyProgress(long fileLength) {
@@ -98,10 +88,10 @@ public class FileUtil {
          LOG.error("Error at nioBufferCopy when copying file [{} -> {}]: ", source.getAbsolutePath(),
                    target.getAbsolutePath(), e);
       } finally {
-         close(inStream);
-         close(outStream);
-         close(inChannel);
-         close(outChannel);
+         CloseableUtil.close(inStream);
+         CloseableUtil.close(outStream);
+         CloseableUtil.close(inChannel);
+         CloseableUtil.close(outChannel);
       }
 
       return isCopySuccess;

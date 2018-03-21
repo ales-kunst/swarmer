@@ -28,7 +28,14 @@
   </dependencyManagement>
 
   <dependencies>
-    <dependency>
+      <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-simple -->
+      <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-simple</artifactId>
+          <version>1.7.25</version>
+      </dependency>
+
+      <dependency>
       <groupId>org.zeroturnaround</groupId>
       <artifactId>zt-exec</artifactId>
       <version>1.10</version>
@@ -70,6 +77,11 @@
       <version>3.8.1</version>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+          <version>RELEASE</version>
+      </dependency>
 
   </dependencies>
 </project>

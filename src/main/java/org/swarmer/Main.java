@@ -15,11 +15,16 @@ public class Main {
          SwarmerContextRetriever.retrieve(SwarmerInputParams.iniFilePath());
 
          FolderChangesWatcherRunner folderChangesWatcherRunner = new FolderChangesWatcherRunner();
-         Thread                     watherThread               = folderChangesWatcherRunner.getThread();
-         watherThread.start();
+         SwarmDeployRunner          swarmDeployRunner          = new SwarmDeployRunner();
 
+         Thread watherThread      = folderChangesWatcherRunner.getThread();
+         Thread swarmDeployThread = swarmDeployRunner.getThread();
+
+         watherThread.start();
+         swarmDeployThread.start();
 
          watherThread.join();
+         swarmDeployThread.join();
 
       } catch (Exception e) {
          LOG.error("Swarmer ended with error: {}", e);

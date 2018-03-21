@@ -51,11 +51,15 @@ public class SwarmFile {
       this.exception = exception;
    }
 
+   public String getAbsolutePath() {
+      return swarmFile.getAbsolutePath();
+   }
+
    public boolean isValid(File file) {
-      return (file == null) ? false : swarmFile.getAbsolutePath().equals(file.getAbsolutePath());
+      return (file != null) && swarmFile.getAbsolutePath().equals(file.getAbsolutePath());
    }
 
    public enum State {
-      COPYING, ERROR_COPYING, COPIED, STARTING_SWARM, ERROR_STARTING_SWARM, SWARM_STARZED, SHUTDOWN_SWARM;
+      COPYING, ERROR_COPYING, COPIED, SWARM_PORT_TAKEN, STARTING_SWARM, ERROR_STARTING_SWARM, SWARM_STARZED, SHUTDOWN_SWARM
    }
 }

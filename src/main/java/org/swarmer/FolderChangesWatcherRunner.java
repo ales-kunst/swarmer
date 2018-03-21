@@ -12,13 +12,13 @@ public class FolderChangesWatcherRunner extends Runner {
    }
 
    @Override
-   protected String getName() {
-      return FolderChangesWatcherRunner.class.getName();
-   }
-
-   @Override
    public void runLocal() throws Exception {
       FolderChangesWatcher folderChangesWatcher = new FolderChangesWatcher();
       folderChangesWatcher.watch();
+   }
+
+   @Override
+   protected String getName() {
+      return FolderChangesWatcherRunner.class.getName();
    }
 }

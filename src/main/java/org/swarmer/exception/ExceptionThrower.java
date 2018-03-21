@@ -18,5 +18,9 @@ public class ExceptionThrower {
       throw new ValidationException(msg);
    }
 
+   public static void throwIllegalArgumentException(String msg) {
+      throw new IllegalArgumentException(msg);
+   }
+
    private ExceptionThrower() {}
 }

@@ -23,7 +23,6 @@ public class SwarmDeployment {
    }
 
    public SwarmFile getSwarmFile() {
-
       return swarmFile;
    }
 
