@@ -2,7 +2,7 @@ package org.swarmer.util;
 
 import org.junit.Test;
 
-import java.io.IOException;
+import java.io.File;
 
 public class SwarmExecutorTest {
 
@@ -14,15 +14,22 @@ public class SwarmExecutorTest {
 
    @Test
    public void executeCommand() {
+      /*
       try {
-         Process process = SwarmExecutor
-                 .executeCommand(JAVA_EXE, FILE_ENC_PARAM_01, BIND_ADDRESS_PARAM_02, JAR_FILE_PARAM_04,
-                                 JAR_FILE_PARAM_05);
+
+         Process process = SwarmExecutor.executeLongLivingCommand(JAVA_EXE, FILE_ENC_PARAM_01, BIND_ADDRESS_PARAM_02,
+                                                                  JAR_FILE_PARAM_04, JAR_FILE_PARAM_05);
 
          SwarmExecutor.destroy(process);
 
       } catch (IOException e) {
          e.printStackTrace();
       }
+      */
+   }
+
+   @Test
+   public void testGetJavaFolder() {
+      File javaFolder = SwarmExecutor.getJavaFolder();
    }
 }

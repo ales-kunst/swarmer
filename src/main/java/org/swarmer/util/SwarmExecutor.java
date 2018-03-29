@@ -2,11 +2,13 @@ package org.swarmer.util;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.zeroturnaround.exec.ProcessExecutor;
+import org.zeroturnaround.exec.ProcessResult;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.util.Scanner;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class SwarmExecutor {
    private static final Logger LOG               = LogManager.getLogger(SwarmExecutor.class);
@@ -16,7 +18,7 @@ public class SwarmExecutor {
       process.destroy();
    }
 
-   public static Process executeCommand(String... command) throws IOException {
+   public static Process executeLongLivingCommand(String... command) throws IOException {
       Process process = null;
 
       ProcessBuilder processBuilder = new ProcessBuilder(command);
@@ -32,7 +34,7 @@ public class SwarmExecutor {
          while ((line = errStreamReader.readLine()) != null) {
             errorContent.append(line);
          }
-         LOG.error("Error stream in executeCommand:\n{}\n", errorContent.toString());
+         LOG.error("Error stream in executeLongLivingCommand:\n{}\n", errorContent.toString());
          CloseableUtil.close(errStreamReader);
       }
 
@@ -45,10 +47,28 @@ public class SwarmExecutor {
             break;
          }
       }
-      LOG.debug("Std stream in executeCommand:\n{}\n", stdOutContent.toString());
+      LOG.debug("Std stream in executeLongLivingCommand:\n{}\n", stdOutContent.toString());
       CloseableUtil.close(stdStreamReader);
 
       return process;
+   }
+
+   public static File getJavaFolder() {
+      File file = null;
+      try {
+         Future<ProcessResult> future    = new ProcessExecutor().command("where", "javac.exe").readOutput(true).start()
+                                                                .getFuture();
+         ProcessResult         pr        = future.get(60, TimeUnit.SECONDS);
+         String                output    = pr.outputUTF8();
+         Scanner               sc        = new Scanner(output);
+         String                firstLine = sc.nextLine();
+         // Path to JDK folder
+         file = new File(firstLine).getParentFile().getParentFile();
+      } catch (Exception e) {
+         LOG.error("Error in getJavaFolder: {}", e);
+      }
+
+      return file;
    }
 
    public static boolean isProcessRunning(Process process) {
@@ -57,6 +77,10 @@ public class SwarmExecutor {
          return false;
       } catch (Exception e) {}
       return true;
+   }
+
+   public static void startNewSwarmInstance(String... command) {
+      // new ProcessExecutor().command()
    }
 
    private SwarmExecutor() {}
