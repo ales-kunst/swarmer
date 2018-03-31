@@ -1,5 +1,6 @@
 package org.swarmer.util;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
@@ -13,7 +14,7 @@ public class SwarmExecutorTest {
    private static String JAVA_EXE              = "C:\\winapp\\Java\\1.8.0_102\\X64\\JDK\\bin\\java.exe";
 
    @Test
-   public void executeCommand() {
+   public void testExecuteCommand() {
       /*
       try {
 
@@ -26,10 +27,12 @@ public class SwarmExecutorTest {
          e.printStackTrace();
       }
       */
+
    }
 
    @Test
    public void testGetJavaFolder() {
       File javaFolder = SwarmExecutor.getJavaFolder();
+      Assert.assertTrue((javaFolder != null) && javaFolder.exists());
    }
 }

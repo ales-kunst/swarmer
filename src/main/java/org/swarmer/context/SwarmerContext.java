@@ -1,5 +1,6 @@
 package org.swarmer.context;
 
+import org.apache.commons.lang.math.IntRange;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.ini4j.Ini;
@@ -12,6 +13,8 @@ public class SwarmerContext {
    private static final Logger         LOG                       = LogManager.getLogger(SwarmerContext.class);
    private static final String         SETTING_JAVA_PATH         = "java.path";
    private static final String         SETTING_LOCK_WAIT_TIMEOUT = "lock.wait.timeout";
+   private static final String         SETTING_SWARM_PORT_LOWER  = "swarm.port.lower";
+   private static final String         SETTING_SWARM_PORT_UPPER  = "swarm.port.upper";
    private static       SwarmerContext ctxInstance               = null;
 
    public static SwarmerContext instance() {
@@ -51,6 +54,12 @@ public class SwarmerContext {
       }
 
       return lockWaitTimeout;
+   }
+
+   public IntRange getPortRange() {
+      int defaultLowerPort = 8000;
+      int defaultUpperPort = 10000;
+      return new IntRange(defaultLowerPort, defaultUpperPort);
    }
 
    public DeploymentContainer[] getDeploymentContainers() {
