@@ -1,4 +1,4 @@
-<code_scheme name="Swarmer Code Style" version="173">
+<code_scheme name="AQ Code Style" version="173">
   <JavaCodeStyleSettings>
     <option name="ANNOTATION_PARAMETER_WRAP" value="1" />
     <option name="ALIGN_MULTILINE_ANNOTATION_PARAMETERS" value="true" />
@@ -13,6 +13,7 @@
     <option name="ALIGN_GROUP_FIELD_DECLARATIONS" value="true" />
     <option name="ALIGN_CONSECUTIVE_VARIABLE_DECLARATIONS" value="true" />
     <option name="CALL_PARAMETERS_WRAP" value="1" />
+      <option name="PREFER_PARAMETERS_WRAP" value="true"/>
     <option name="METHOD_PARAMETERS_WRAP" value="1" />
     <option name="RESOURCE_LIST_WRAP" value="1" />
     <option name="METHOD_CALL_CHAIN_WRAP" value="1" />
@@ -31,6 +32,7 @@
     <indentOptions>
       <option name="INDENT_SIZE" value="3" />
       <option name="TAB_SIZE" value="3" />
+        <option name="LABEL_INDENT_ABSOLUTE" value="true"/>
     </indentOptions>
     <arrangement>
       <tokens>
@@ -63,6 +65,20 @@
           </rules>
         </token>
       </tokens>
+        <groups>
+            <group>
+                <type>GETTERS_AND_SETTERS</type>
+                <order>KEEP</order>
+            </group>
+            <group>
+                <type>OVERRIDDEN_METHODS</type>
+                <order>BY_NAME</order>
+            </group>
+            <group>
+                <type>DEPENDENT_METHODS</type>
+                <order>BREADTH_FIRST</order>
+            </group>
+        </groups>
       <rules>
         <section>
           <rule>
@@ -168,18 +184,21 @@
           <rule>
             <match>
               <AND>
-                <INITIALIZER_BLOCK>true</INITIALIZER_BLOCK>
-                <STATIC>true</STATIC>
+                  <FIELD>true</FIELD>
+                  <FINAL>true</FINAL>
+                  <PUBLIC>true</PUBLIC>
               </AND>
             </match>
+              <order>BY_NAME</order>
           </rule>
         </section>
         <section>
           <rule>
             <match>
               <AND>
-                <METHOD>true</METHOD>
-                <STATIC>true</STATIC>
+                  <FIELD>true</FIELD>
+                  <FINAL>true</FINAL>
+                  <PROTECTED>true</PROTECTED>
               </AND>
             </match>
             <order>BY_NAME</order>
@@ -191,7 +210,7 @@
               <AND>
                 <FIELD>true</FIELD>
                 <FINAL>true</FINAL>
-                <PUBLIC>true</PUBLIC>
+                  <PACKAGE_PRIVATE>true</PACKAGE_PRIVATE>
               </AND>
             </match>
             <order>BY_NAME</order>
@@ -203,7 +222,7 @@
               <AND>
                 <FIELD>true</FIELD>
                 <FINAL>true</FINAL>
-                <PROTECTED>true</PROTECTED>
+                  <PRIVATE>true</PRIVATE>
               </AND>
             </match>
             <order>BY_NAME</order>
@@ -214,8 +233,7 @@
             <match>
               <AND>
                 <FIELD>true</FIELD>
-                <FINAL>true</FINAL>
-                <PACKAGE_PRIVATE>true</PACKAGE_PRIVATE>
+                  <PUBLIC>true</PUBLIC>
               </AND>
             </match>
             <order>BY_NAME</order>
@@ -226,8 +244,7 @@
             <match>
               <AND>
                 <FIELD>true</FIELD>
-                <FINAL>true</FINAL>
-                <PRIVATE>true</PRIVATE>
+                  <PROTECTED>true</PROTECTED>
               </AND>
             </match>
             <order>BY_NAME</order>
@@ -238,7 +255,7 @@
             <match>
               <AND>
                 <FIELD>true</FIELD>
-                <PUBLIC>true</PUBLIC>
+                  <PACKAGE_PRIVATE>true</PACKAGE_PRIVATE>
               </AND>
             </match>
             <order>BY_NAME</order>
@@ -249,7 +266,7 @@
             <match>
               <AND>
                 <FIELD>true</FIELD>
-                <PROTECTED>true</PROTECTED>
+                  <PRIVATE>true</PRIVATE>
               </AND>
             </match>
             <order>BY_NAME</order>
@@ -259,8 +276,19 @@
           <rule>
             <match>
               <AND>
-                <FIELD>true</FIELD>
-                <PACKAGE_PRIVATE>true</PACKAGE_PRIVATE>
+                  <INITIALIZER_BLOCK>true</INITIALIZER_BLOCK>
+                  <STATIC>true</STATIC>
+              </AND>
+            </match>
+          </rule>
+        </section>
+          <section>
+              <rule>
+                  <match>
+                      <AND>
+                          <METHOD>true</METHOD>
+                          <PUBLIC>true</PUBLIC>
+                          <STATIC>true</STATIC>
               </AND>
             </match>
             <order>BY_NAME</order>
@@ -270,8 +298,9 @@
           <rule>
             <match>
               <AND>
-                <FIELD>true</FIELD>
-                <PRIVATE>true</PRIVATE>
+                  <METHOD>true</METHOD>
+                  <PROTECTED>true</PROTECTED>
+                  <STATIC>true</STATIC>
               </AND>
             </match>
             <order>BY_NAME</order>
@@ -280,7 +309,23 @@
         <section>
           <rule>
             <match>
-              <FIELD>true</FIELD>
+                <AND>
+                    <METHOD>true</METHOD>
+                    <PACKAGE_PRIVATE>true</PACKAGE_PRIVATE>
+                    <STATIC>true</STATIC>
+                </AND>
+            </match>
+              <order>BY_NAME</order>
+          </rule>
+        </section>
+          <section>
+              <rule>
+                  <match>
+                      <AND>
+                          <METHOD>true</METHOD>
+                          <PRIVATE>true</PRIVATE>
+                          <STATIC>true</STATIC>
+                      </AND>
             </match>
             <order>BY_NAME</order>
           </rule>

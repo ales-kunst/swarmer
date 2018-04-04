@@ -1,0 +1,13 @@
+swarm:
+  management:
+    security-realms:
+      ManagementRealm:
+        in-memory-authentication:
+          users:
+            admin:
+              password: admin
+    http-interface-management-interface:
+      allowed-origins:
+       - http://localhost:8080
+       - http://localhost:8085
+      security-realm: ManagementRealm

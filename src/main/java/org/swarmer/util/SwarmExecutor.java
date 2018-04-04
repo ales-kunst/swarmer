@@ -14,24 +14,46 @@ import java.util.concurrent.TimeUnit;
 
 
 public class SwarmExecutor {
-   private static final String CMD_COMMAND        = "cmd.exe";
-   private static final Logger LOG                = LogManager.getLogger(SwarmExecutor.class);
-   private static final String RUN_COMMAND_OPTION = "/c";
-   private static final String START_COMMAND      = "start";
-   private static final String START_PATH_OPTION  = "/D";
-   private static final String SWARM_STARTED_TXT  = "WildFly Swarm is Ready";
+   private static final String CMD_COMMAND           = "cmd.exe";
+   private static final String JAVA_COMMAND          = "java";
+   private static final String JVM_SWARM_PORT_OPTION = "-Dswarm.http.port=";
+   private static final Logger LOG                   = LogManager.getLogger(SwarmExecutor.class);
+   private static final String RUN_COMMAND_OPTION    = "/c";
+   private static final String START_COMMAND         = "start";
+   private static final String START_PATH_OPTION     = "/D";
+   private static final String SWARM_STARTED_TXT     = "WildFly Swarm is Ready";
 
 
-   public static String[] createSwarmCliArguments(String windowTitle, String startPath, String port, String jvmArgs) {
+   public static String[] createSwarmCliArguments(String windowTitle, String port, String jvmArgs, File swarmJar) {
       List<String> cliArgs = new ArrayList<>();
       cliArgs.add(CMD_COMMAND);
       cliArgs.add(RUN_COMMAND_OPTION);
       cliArgs.add(START_COMMAND);
       cliArgs.add(windowTitle);
-      cliArgs.add(START_PATH_OPTION);
-      cliArgs.add(startPath);
+      if (swarmJar.getParent() != null) {
+         cliArgs.add(START_PATH_OPTION);
+         cliArgs.add(swarmJar.getParent());
+      }
+      cliArgs.add(JAVA_COMMAND);
       cliArgs.addAll(parseJvmArgs(jvmArgs));
+      cliArgs.add(JVM_SWARM_PORT_OPTION + port);
       return cliArgs.toArray(new String[cliArgs.size()]);
+   }
+
+   public static List<String> parseJvmArgs(String jvmArgs) {
+      final String JVM_ARG_DELIMETER = "-";
+      List<String> resultJvmArgs     = new ArrayList<>();
+      Scanner      sc                = new Scanner(jvmArgs);
+
+      while (sc.hasNext(JVM_ARG_DELIMETER)) {
+         String jvmArg = sc.next(JVM_ARG_DELIMETER);
+         resultJvmArgs.add(JVM_ARG_DELIMETER + jvmArg);
+      }
+      return resultJvmArgs;
+   }
+
+   public static void destroy(Process process) {
+      process.destroy();
    }
 
    public static ProcessResult executeCommand(String... args) {
@@ -44,28 +66,6 @@ public class SwarmExecutor {
 
       }
       return null;
-   }
-
-   public static void destroy(Process process) {
-      process.destroy();
-   }
-
-   public static File getJavaFolder() {
-      File file = null;
-      try {
-         Future<ProcessResult> future = new ProcessExecutor().command("where", "javac.exe").readOutput(true).start()
-                                                             .getFuture();
-         ProcessResult pr        = future.get(60, TimeUnit.SECONDS);
-         String        output    = pr.outputUTF8();
-         Scanner       sc        = new Scanner(output);
-         String        firstLine = sc.nextLine();
-         // Path to JDK folder
-         file = new File(firstLine).getParentFile().getParentFile();
-      } catch (Exception e) {
-         LOG.error("Error in getJavaFolder: {}", e);
-      }
-
-      return file;
    }
 
    public static Process executeLongLivingCommand(String... command) throws IOException {
@@ -102,24 +102,30 @@ public class SwarmExecutor {
       return process;
    }
 
-   public static List<String> parseJvmArgs(String jvmArgs) {
-      final String JVM_ARG_DELIM = "-";
-      List<String> resultJvmArgs = new ArrayList<>();
-      Scanner      sc            = new Scanner(jvmArgs);
-
-      while (sc.hasNext(JVM_ARG_DELIM)) {
-         String jvmArg = sc.next(JVM_ARG_DELIM);
-         resultJvmArgs.add(JVM_ARG_DELIM + jvmArg);
-      }
-      return resultJvmArgs;
-   }
-
    public static boolean isProcessRunning(Process process) {
       try {
          process.exitValue();
          return false;
       } catch (Exception e) {}
       return true;
+   }
+
+   public static File getJavaFolder() {
+      File file = null;
+      try {
+         Future<ProcessResult> future = new ProcessExecutor().command("where", "javac.exe").readOutput(true).start()
+                                                             .getFuture();
+         ProcessResult pr        = future.get(60, TimeUnit.SECONDS);
+         String        output    = pr.outputUTF8();
+         Scanner       sc        = new Scanner(output);
+         String        firstLine = sc.nextLine();
+         // Path to JDK folder
+         file = new File(firstLine).getParentFile().getParentFile();
+      } catch (Exception e) {
+         LOG.error("Error in getJavaFolder: {}", e);
+      }
+
+      return file;
    }
 
    public static void startNewSwarmInstance(String... command) {

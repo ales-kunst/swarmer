@@ -1,0 +1,1 @@
+START "panter BLUE" /D D:\projects\java\test-swarm-app\target java -Dswarm.bind.address=127.0.0.1 -Dfile.encoding=UTF-8 -Dswarm.http.port=8085 -jar demo-swarm.jar
