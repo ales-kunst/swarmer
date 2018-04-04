@@ -7,51 +7,58 @@ import java.io.File;
 
 public class SwarmExecutorTest {
 
-   private static String BIND_ADDRESS_PARAM_02 = "-Dswarm.bind.address=127.0.0.1";
-   private static String FILE_ENC_PARAM_01     = "-Dfile.encoding=UTF-8";
-   private static String JAR_FILE_PARAM_04     = "-jar";
-   private static String JAR_FILE_PARAM_05     = "D:\\programming\\java\\test-swarm-app\\target\\demo-swarm.jar";
-   private static String JAVA_EXE              = "C:\\winapp\\Java\\1.8.0_102\\X64\\JDK\\bin\\java.exe";
+   private static int DEFAULT_SWARM_STARTUP_TIME = 300;
 
    @Test
    public void testCreateSwarmCliArguments() {
       String jarPath = ".\\src\\scrapbook\\test-swarm-app\\target\\demo-swarm.jar";
+      File   jarFile = new File(jarPath);
       String[] commandLine = SwarmExecutor.createSwarmCliArguments("Blue Instance",
-                                                                   "8080", "", new File(jarPath));
-      // start "Blue Instance" /D D:\Path\To\Some\Swarm\Instance java -Dswarm.bind.address=127.0.0.1 -Dfile.encoding=UTF-8 -Dswarm.http.port=8085 -jar demo-swarm.jar
-      Assert.assertEquals("start", commandLine[0]);
-      Assert.assertEquals("Blue Instance", commandLine[1]);
-      Assert.assertEquals("/D", commandLine[2]);
-      Assert.assertEquals("D:\\Path\\To\\Some\\Swarm\\Instance", commandLine[3]);
-      Assert.assertEquals("java", commandLine[3]);
-      Assert.assertEquals("-Dswarm.http.port=8080", commandLine[3]);
-      Assert.assertEquals("-Dswarm.http.port=8080", commandLine[3]);
-      Assert.assertEquals("-jar", commandLine[3]);
-      Assert.assertEquals("-jar", commandLine[3]);
-      File f = new File("");
-      System.out.println(f.getAbsolutePath());
-   }
+                                                                   "8080", "-Djava.io.tmpdir=D:\\temp\\some_tmp",
+                                                                   "-S appArg", jarFile);
 
-   @Test
-   public void testExecuteCommand() {
-      /*
-      try {
-
-         Process process = SwarmExecutor.executeLongLivingCommand(JAVA_EXE, FILE_ENC_PARAM_01, BIND_ADDRESS_PARAM_02,
-                                                                  JAR_FILE_PARAM_04, JAR_FILE_PARAM_05);
-
-         SwarmExecutor.destroy(process);
-
-      } catch (IOException e) {
-         e.printStackTrace();
-      }
-      */
-
+      Assert.assertEquals("cmd.exe", commandLine[0]);
+      Assert.assertEquals("/c", commandLine[1]);
+      Assert.assertEquals("start", commandLine[2]);
+      Assert.assertEquals("Blue Instance", commandLine[3]);
+      Assert.assertEquals("/D", commandLine[4]);
+      Assert.assertEquals(".\\src\\scrapbook\\test-swarm-app\\target", commandLine[5]);
+      Assert.assertEquals("java", commandLine[6]);
+      Assert.assertEquals("-Dswarm.http.port=8080", commandLine[7]);
+      Assert.assertEquals("-Djava.io.tmpdir=D:\\temp\\some_tmp", commandLine[8]);
+      Assert.assertEquals("-jar", commandLine[9]);
+      Assert.assertEquals(jarFile.getName(), commandLine[10]);
+      Assert.assertEquals("-S", commandLine[11]);
+      Assert.assertEquals("appArg", commandLine[12]);
    }
 
    @Test
    public void testGetJavaFolder() {
       File javaFolder = SwarmExecutor.getJavaFolder();
       Assert.assertTrue((javaFolder != null) && javaFolder.exists());
+   }
+
+   @Test
+   public void testStartSwarmInstance() {
+      final String WINDOW_NAME = "Blue Instance";
+      String       jarPath     = ".\\src\\scrapbook\\test-swarm-app\\target\\demo-swarm.jar";
+      File         jarFile     = new File(jarPath);
+      String[] swarmArgs = SwarmExecutor.createSwarmCliArguments(WINDOW_NAME,
+                                                                 "8080", "-Djava.io.tmpdir=D:\\temp\\some_tmp", "",
+                                                                 jarFile);
+      Process process    = SwarmExecutor.startSwarmInstance(swarmArgs);
+      int     timeWaited = 0;
+      while (SwarmExecutor.waitFor(1000)) {
+         if (!NetUtils.isPortAvailable(8080)) {
+            Assert.assertTrue(true);
+            break;
+         }
+         if (timeWaited > DEFAULT_SWARM_STARTUP_TIME) {
+            Assert.assertTrue("Swarm did not START", false);
+         }
+         timeWaited++;
+      }
+      Assert.assertTrue(SwarmExecutor.killSwarmWindow(WINDOW_NAME));
+
    }
 }

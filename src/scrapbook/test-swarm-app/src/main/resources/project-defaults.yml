@@ -11,3 +11,5 @@ swarm:
        - http://localhost:8080
        - http://localhost:8085
       security-realm: ManagementRealm
+  consul:
+    url: "http://127.0.0.1:8500"
