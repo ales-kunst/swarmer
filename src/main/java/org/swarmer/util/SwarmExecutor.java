@@ -5,7 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
 
-import java.io.*;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -22,7 +22,6 @@ public class SwarmExecutor {
    private static final String RUN_COMMAND_OPTION    = "/c";
    private static final String START_COMMAND         = "start";
    private static final String START_PATH_OPTION     = "/D";
-   private static final String SWARM_STARTED_TXT     = "WildFly Swarm is Ready";
 
 
    public static String[] createSwarmCliArguments(String windowTitle, String port, String jvmArgs, String appArgs,
@@ -60,64 +59,6 @@ public class SwarmExecutor {
       return resultArgs;
    }
 
-   public static void destroy(Process process) {
-      process.destroy();
-   }
-
-   public static ProcessResult executeCommand(String... args) {
-      try {
-         /*
-         Future<ProcessResult> future = new ProcessExecutor().command().readOutput(true).start()
-                                                             .getFuture();
-                                                           */
-      } catch (Exception e) {
-
-      }
-      return null;
-   }
-
-   public static Process executeLongLivingCommand(String... command) throws IOException {
-      Process process = null;
-
-      ProcessBuilder processBuilder = new ProcessBuilder(command);
-      process = processBuilder.start();
-
-      String line;
-
-      if (!isProcessRunning(process)) {
-         InputStream    stdErr          = process.getErrorStream();
-         BufferedReader errStreamReader = new BufferedReader(new InputStreamReader(stdErr));
-         StringBuffer   errorContent    = new StringBuffer();
-         while ((line = errStreamReader.readLine()) != null) {
-            errorContent.append(line);
-         }
-         LOG.error("Error executing executeLongLivingCommand:\n{}\n", errorContent.toString());
-         CloseableUtil.close(errStreamReader);
-      }
-
-      InputStream    stdOut          = process.getInputStream();
-      BufferedReader stdStreamReader = new BufferedReader(new InputStreamReader(stdOut));
-      StringBuffer   stdOutContent   = new StringBuffer();
-      while ((line = stdStreamReader.readLine()) != null) {
-         stdOutContent.append(line + "\n");
-         if (line.contains(SWARM_STARTED_TXT)) {
-            break;
-         }
-      }
-      LOG.debug("Std stream in executeLongLivingCommand:\n{}\n", stdOutContent.toString());
-      CloseableUtil.close(stdStreamReader);
-
-      return process;
-   }
-
-   public static boolean isProcessRunning(Process process) {
-      try {
-         process.exitValue();
-         return false;
-      } catch (Exception e) {}
-      return true;
-   }
-
    public static File getJavaFolder() {
       File file = null;
       try {
@@ -134,6 +75,75 @@ public class SwarmExecutor {
       }
 
       return file;
+   }
+
+   public static int getSwarmPID(String swarmJar, long uid) {
+      int                   pid    = -1;
+      Future<ProcessResult> future = null;
+      try {
+         future = new ProcessExecutor().command("jps.exe", "-mlv").readOutput(true)
+                                       .start().getFuture();
+         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
+         pid = parsePID(processResult.outputUTF8(), swarmJar, uid);
+      } catch (Exception e) {
+         LOG.error("Error executing getSwarmPID: {}", e);
+      }
+      return pid;
+   }
+
+   private static int parsePID(String content, String swarmJar, long uid) {
+      int     pid  = -1;
+      Scanner sc   = new Scanner(content);
+      String  line = null;
+      while (sc.hasNextLine() || (line == null)) {
+         line = sc.nextLine();
+         if (line.contains(swarmJar) && line.contains("-Duid=" + uid)) {
+            Scanner sc_pid = new Scanner(line);
+            pid = sc_pid.nextInt();
+            break;
+         }
+      }
+      return pid;
+   }
+
+   public static boolean javaProcessStatusToolExists() {
+      boolean               success = true;
+      Future<ProcessResult> future  = null;
+      try {
+         LOG.info("Looking up jps.exe");
+         future = new ProcessExecutor().command("where", "jps.exe").readOutput(true)
+                                       .start().getFuture();
+         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
+         if (processResult.getExitValue() != 0) {
+            success = false;
+         }
+      } catch (Exception e) {
+         LOG.error("Error executing javaProcessStatusToolExists: {}", e);
+         success = false;
+      }
+      if (success) {
+         LOG.info("jps.exe found");
+      } else {
+         LOG.info("jps.exe not found");
+      }
+      return success;
+   }
+
+   public static boolean sigIntSwarm(int pid) {
+      boolean               success = false;
+      Future<ProcessResult> future  = null;
+      try {
+         future = new ProcessExecutor().command(FileUtil.KILL_APP_PATH, "-SIGINT", Integer.toString(pid)).readOutput(
+                 true)
+                                       .start().getFuture();
+         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
+         if (processResult.getExitValue() == 0) {
+            success = true;
+         }
+      } catch (Exception e) {
+         LOG.error("Error executing getSwarmPID: {}", e);
+      }
+      return success;
    }
 
    public static boolean killSwarmWindow(String windowName) {

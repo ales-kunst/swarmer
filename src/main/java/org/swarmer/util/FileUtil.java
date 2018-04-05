@@ -3,10 +3,7 @@ package org.swarmer.util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.DirectoryNotEmptyException;
@@ -17,7 +14,8 @@ import java.util.Random;
 
 public class FileUtil {
 
-   private static final Logger LOG = LogManager.getLogger(FileUtil.class);
+   public static final  String KILL_APP_PATH = System.getProperty("java.io.tmpdir") + "\\windows-kill.exe";
+   private static final Logger LOG           = LogManager.getLogger(FileUtil.class);
 
    public static boolean canObtainExclusiveLock(Path source) {
       boolean canObtainExclusiveLock = false;
@@ -45,6 +43,27 @@ public class FileUtil {
 
 
       return canObtainExclusiveLock;
+   }
+
+   public static boolean copyWindowsKillAppToTmp() {
+      boolean      success   = true;
+      InputStream  inStream  = null;
+      OutputStream outStream = null;
+      try {
+         inStream = SwarmExecutor.class.getResourceAsStream("/windows-kill.exe");
+         outStream = new FileOutputStream(KILL_APP_PATH);
+         byte[] buffer = new byte[1024];
+         int    length;
+         while ((length = inStream.read(buffer)) > 0) {
+            outStream.write(buffer, 0, length);
+         }
+      } catch (Exception e) {
+         LOG.error("Error executing copyWindowsKillAppToTmp: {}", e);
+         success = false;
+      }
+      CloseableUtil.close(inStream);
+      CloseableUtil.close(outStream);
+      return success;
    }
 
    public static CopyProgress createCopyProgress(long fileLength) {
@@ -111,6 +130,11 @@ public class FileUtil {
       }
 
       return success;
+   }
+
+   public static boolean windowsKillAppExists() {
+      File windowsKillFile = new File(KILL_APP_PATH);
+      return windowsKillFile.exists();
    }
 
    public static class CopyProgress {

@@ -1,1 +1,1 @@
-START "panter BLUE" /D .\target java -Djava.io.tmpdir=D:\temp\some_tmp -Dswarm.bind.address=127.0.0.1 -Dfile.encoding=UTF-8 -Dswarm.http.port=8085 -jar demo-swarm.jar
+start "panter BLUE" /D .\target cmd /k  java -Djava.io.tmpdir=D:\temp\some_tmp -Dswarm.bind.address=127.0.0.1 -Dfile.encoding=UTF-8 -Dswarm.http.port=8085 -jar demo-swarm.jar
