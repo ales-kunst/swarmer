@@ -16,6 +16,10 @@ public class NetUtils {
    private static final Logger LOG                   = LogManager.getLogger(NetUtils.class);
 
    public static StringBuffer getUrlContent(String urlAddress) {
+      return getUrlContent(urlAddress, true);
+   }
+
+   public static StringBuffer getUrlContent(String urlAddress, boolean shouldLog) {
       URL            url           = null;
       StringBuffer   resultContent = null;
       BufferedReader contentReader = null;
@@ -39,7 +43,9 @@ public class NetUtils {
       } catch (IOException e) {
          CloseableUtil.close(contentReader);
          resultContent = null;
-         LOG.error("Error executing getUrlContent: {}", e);
+         if (shouldLog) {
+            LOG.error("Error executing getUrlContent: {}", e);
+         }
       }
       return resultContent;
    }
