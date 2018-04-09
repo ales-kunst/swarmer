@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.swarmer.context.DeploymentContainer;
 import org.swarmer.context.SwarmerContext;
+import org.swarmer.util.SwarmExecutor;
 
 public class SwarmDeployer {
    private static final Logger LOG = LogManager.getLogger(SwarmDeployer.class);
@@ -24,16 +25,7 @@ public class SwarmDeployer {
             }
          }
 
-         sleep(1000);
+         SwarmExecutor.waitFor(1000);
       }
    }
-
-   private void sleep(long millis) {
-      try {
-         Thread.sleep(1000);
-      } catch (InterruptedException e) {
-         LOG.warn("Sleep error: []", e);
-      }
-   }
-
 }

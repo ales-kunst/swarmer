@@ -2,18 +2,23 @@ package org.swarmer.executor;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.swarmer.context.DeploymentColor;
-import org.swarmer.context.DeploymentContainer;
-import org.swarmer.context.SwarmDeployment;
-import org.swarmer.context.SwarmFile;
+import org.swarmer.context.*;
+import org.swarmer.exception.ExceptionThrower;
+import org.swarmer.exception.SwarmerException;
+import org.swarmer.util.FileUtil;
 import org.swarmer.util.NetUtils;
+import org.swarmer.util.SwarmExecutor;
+
+import java.io.File;
 
 public class SwarmDeploymentExecutor implements Runnable {
-   private static final Logger LOG = LogManager.getLogger(SwarmDeploymentExecutor.class);
-   private final DeploymentContainer deploymentContainer;
+   private static final Logger              LOG = LogManager.getLogger(SwarmDeploymentExecutor.class);
+   private final        DeploymentContainer deploymentContainer;
+   private final        SwarmerContext      swarmerCtx;
 
    public SwarmDeploymentExecutor(DeploymentContainer deploymentContainer) {
       this.deploymentContainer = deploymentContainer;
+      swarmerCtx = SwarmerContext.instance();
    }
 
    @Override
@@ -36,6 +41,49 @@ public class SwarmDeploymentExecutor implements Runnable {
       }
    }
 
+   private SwarmDeployment startDeploy(SwarmFile copiedSwarmFile,
+                                       DeploymentColor colorToDeploy) throws SwarmerException {
+      int             port            = NetUtils.getFirstAvailablePort(swarmerCtx.getPortRange());
+      SwarmDeployment swarmDeployment = new SwarmDeployment(copiedSwarmFile, port);
+
+      if (port == -1) {
+         executeSwarmProcess(swarmDeployment, colorToDeploy);
+         deploymentContainer.setDeployment(colorToDeploy, swarmDeployment);
+      } else {
+         String errMsg = String.format("No available ports in the range %s",
+                                       swarmerCtx.getPortRange().toString());
+         ExceptionThrower.throwSwarmerException(errMsg);
+      }
+
+      return swarmDeployment;
+   }
+
+   private boolean executeSwarmProcess(SwarmDeployment swarmDeployment, DeploymentColor colorToDeploy) {
+      LOG.info("Starting swarm: [{}]", swarmDeployment.getSwarmFile().getAbsolutePath());
+      new File(FileUtil.KILL_APP_PATH).delete();
+      new File(FileUtil.WIN_TEE_APP_PATH).delete();
+      FileUtil.copyWindowsKillAppToTmp();
+      FileUtil.copyWinTeeAppToTmp();
+      String windowTitle = deploymentContainer.getName() + " " + colorToDeploy.toString();
+      String jvmArgs     = null;
+      String appArgs     = "";
+      if (colorToDeploy.equals(DeploymentColor.BLUE)) {
+         jvmArgs = deploymentContainer.getSwarmConfig().getBlueJvmParams();
+      } else {
+         jvmArgs = deploymentContainer.getSwarmConfig().getGreenJvmParams();
+      }
+      File swarmJarFile = deploymentContainer.getTargetPath();
+      String[] swarmCommand = SwarmExecutor.createSwarmCliArguments(windowTitle,
+                                                                    Integer.toString(swarmDeployment.getPort()),
+                                                                    jvmArgs,
+                                                                    appArgs,
+                                                                    swarmJarFile);
+      Process swarmProcess = SwarmExecutor.startSwarmInstance(swarmCommand);
+      swarmDeployment.setSwarmState(SwarmFile.State.STARTING_SWARM, null);
+
+      return true;
+   }
+
    private boolean checkPortAvailability(SwarmDeployment swarmDeployment, DeploymentColor colorToDeploy) {
       int    port          = -1;
       String swarmFilePath = swarmDeployment.getSwarmFile().getAbsolutePath();
@@ -48,24 +96,5 @@ public class SwarmDeploymentExecutor implements Runnable {
       }
 
       return NetUtils.isPortAvailable(port);
-   }
-
-   private void executeSwarmProcess(SwarmDeployment swarmDeployment) {
-      LOG.info("Starting swarm: [{}]", swarmDeployment.getSwarmFile().getAbsolutePath());
-      swarmDeployment.setSwarmState(SwarmFile.State.STARTING_SWARM, null);
-   }
-
-   private SwarmDeployment startDeploy(SwarmFile copiedSwarmFile, DeploymentColor colorToDeploy) {
-      SwarmDeployment swarmDeployment             = new SwarmDeployment(copiedSwarmFile);
-      boolean         shouldCheckPortAvailability = deploymentContainer.getDeployment(colorToDeploy) == null;
-      boolean         isPortAvailable             =
-              !shouldCheckPortAvailability || checkPortAvailability(swarmDeployment, colorToDeploy);
-
-      if (isPortAvailable) {
-         executeSwarmProcess(swarmDeployment);
-      } else {
-         swarmDeployment.setSwarmState(SwarmFile.State.SWARM_PORT_TAKEN, null);
-      }
-      return swarmDeployment;
    }
 }

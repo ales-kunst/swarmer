@@ -25,6 +25,8 @@ public class SwarmExecutorTest {
    @BeforeClass
    public static void setUpBeforeClass() {
       try {
+         FileUtil.copyWinTeeAppToTmp();
+         FileUtil.copyWindowsKillAppToTmp();
          copyConsulExecToTmp();
          consulProcess = startConsul();
          waitForConsulToStart();
@@ -76,6 +78,8 @@ public class SwarmExecutorTest {
 
    @AfterClass
    public static void tearDownAfterClass() {
+      new File(FileUtil.KILL_APP_PATH).delete();
+      new File(FileUtil.WIN_TEE_APP_PATH).delete();
       if (consulProcess != null) {
          LOG.info("Stopping Consul forcibly.");
          consulProcess.destroyForcibly();
@@ -97,19 +101,14 @@ public class SwarmExecutorTest {
       Assert.assertEquals("Blue Instance", commandLine[3]);
       Assert.assertEquals("/D", commandLine[4]);
       Assert.assertEquals(".\\src\\scrapbook\\test-swarm-app\\target", commandLine[5]);
-      Assert.assertEquals("java", commandLine[6]);
-      Assert.assertEquals("-Dswarm.http.port=8080", commandLine[7]);
-      Assert.assertEquals("-Djava.io.tmpdir=D:\\temp\\some_tmp", commandLine[8]);
-      Assert.assertEquals("-jar", commandLine[9]);
-      Assert.assertEquals(jarFile.getName(), commandLine[10]);
-      Assert.assertEquals("-S", commandLine[11]);
-      Assert.assertEquals("appArg", commandLine[12]);
-   }
-
-   @Test
-   public void testGetJavaFolder() {
-      File javaFolder = SwarmExecutor.getJavaFolder();
-      Assert.assertTrue((javaFolder != null) && javaFolder.exists());
+      Assert.assertEquals(FileUtil.WIN_TEE_APP_PATH, commandLine[6]);
+      Assert.assertEquals("java", commandLine[7]);
+      Assert.assertEquals("-Dswarm.http.port=8080", commandLine[8]);
+      Assert.assertEquals("-Djava.io.tmpdir=D:\\temp\\some_tmp", commandLine[9]);
+      Assert.assertEquals("-jar", commandLine[10]);
+      Assert.assertEquals(jarFile.getName(), commandLine[11]);
+      Assert.assertEquals("-S", commandLine[12]);
+      Assert.assertEquals("appArg", commandLine[13]);
    }
 
    @Test
@@ -119,6 +118,7 @@ public class SwarmExecutorTest {
       Assert.assertTrue(pid != -1);
       FileUtil.copyWindowsKillAppToTmp();
       SwarmExecutor.sigIntSwarm(pid);
+      waitSwarmToShutDown("demo-swarm.jar", uid);
    }
 
    private long startSwarm() {
@@ -130,6 +130,8 @@ public class SwarmExecutorTest {
       String[] swarmArgs = SwarmExecutor.createSwarmCliArguments(WINDOW_NAME,
                                                                  "8080", jvmArgs, "",
                                                                  jarFile);
+      new File(FileUtil.WIN_TEE_APP_PATH).delete();
+      FileUtil.copyWinTeeAppToTmp();
       SwarmExecutor.startSwarmInstance(swarmArgs);
       int timeWaited = 0;
       while (SwarmExecutor.waitFor(1000)) {
@@ -144,6 +146,20 @@ public class SwarmExecutorTest {
       }
 
       return uid;
+   }
+
+   private void waitSwarmToShutDown(String swarmJar, long uid) {
+      int timeWaited = 0;
+      while (SwarmExecutor.waitFor(1000)) {
+         int     pid                 = SwarmExecutor.getSwarmPID(swarmJar, uid);
+         boolean successfuleShutdown = (pid == -1);
+         if (successfuleShutdown) {
+            break;
+         } else if (timeWaited > DEFAULT_SWARM_STARTUP_TIME) {
+            throw new RuntimeException("Swarm could not shutdown!");
+         }
+         timeWaited++;
+      }
    }
 
    @Test

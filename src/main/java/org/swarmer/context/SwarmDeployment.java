@@ -6,17 +6,21 @@ import org.swarmer.exception.ExceptionThrower;
 import org.swarmer.exception.SwarmerException;
 
 public class SwarmDeployment {
-   private static final Logger LOG = LogManager.getLogger(SwarmDeployment.class);
-   private Process   process;
-   private long      processTimeStart;
-   private SwarmFile swarmFile;
+   private static final Logger    LOG = LogManager.getLogger(SwarmDeployment.class);
+   private              int       port;
+   private              Process   process;
+   private              long      processTimeStart;
+   private              SwarmFile swarmFile;
 
 
-   public SwarmDeployment(SwarmFile swarmFile) {
+   public SwarmDeployment(SwarmFile swarmFile, int port) {
       this.swarmFile = swarmFile;
       this.process = null;
       this.processTimeStart = -1;
+      this.port = port;
    }
+
+   public int getPort() { return port; }
 
    public long getProcessTimeStart() {
       return processTimeStart;

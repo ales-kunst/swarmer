@@ -1,5 +1,6 @@
 package org.swarmer.util;
 
+import org.apache.commons.lang.math.IntRange;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.swarmer.exception.ExceptionThrower;
@@ -48,6 +49,17 @@ public class NetUtils {
          }
       }
       return resultContent;
+   }
+
+   public static int getFirstAvailablePort(IntRange range) {
+      int freePort = -1;
+      for (int port = range.getMinimumInteger(); port <= range.getMaximumInteger(); port++) {
+         if (isPortAvailable(port)) {
+            freePort = port;
+            break;
+         }
+      }
+      return freePort;
    }
 
    public static boolean isPortAvailable(int port) {

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 
 public class SwarmExecutor {
@@ -37,6 +38,7 @@ public class SwarmExecutor {
          cliArgs.add(START_PATH_OPTION);
          cliArgs.add(swarmJar.getParent());
       }
+      cliArgs.add(FileUtil.WIN_TEE_APP_PATH);
       cliArgs.add(JAVA_COMMAND);
       cliArgs.add(JVM_SWARM_PORT_OPTION + port);
       cliArgs.addAll(parseArgs(jvmArgs, JVM_ARG_DELIMETER));
@@ -57,24 +59,6 @@ public class SwarmExecutor {
       }
       CloseableUtil.close(sc);
       return resultArgs;
-   }
-
-   public static File getJavaFolder() {
-      File file = null;
-      try {
-         Future<ProcessResult> future = new ProcessExecutor().command("where", "javac.exe").readOutput(true).start()
-                                                             .getFuture();
-         ProcessResult pr        = future.get(60, TimeUnit.SECONDS);
-         String        output    = pr.outputUTF8();
-         Scanner       sc        = new Scanner(output);
-         String        firstLine = sc.nextLine();
-         // Path to JDK folder
-         file = new File(firstLine).getParentFile().getParentFile();
-      } catch (Exception e) {
-         LOG.error("Error in getJavaFolder: {}", e);
-      }
-
-      return file;
    }
 
    public static int getSwarmPID(String swarmJar, long uid) {
@@ -106,6 +90,16 @@ public class SwarmExecutor {
       return pid;
    }
 
+   public static boolean isProcessLiving(Process process) {
+      boolean isAlive = true;
+      try {
+         process.exitValue();
+      } catch (IllegalThreadStateException e) {
+         isAlive = false;
+      }
+      return isAlive;
+   }
+
    public static boolean javaProcessStatusToolExists() {
       boolean               success = true;
       Future<ProcessResult> future  = null;
@@ -129,23 +123,6 @@ public class SwarmExecutor {
       return success;
    }
 
-   public static boolean sigIntSwarm(int pid) {
-      boolean               success = false;
-      Future<ProcessResult> future  = null;
-      try {
-         future = new ProcessExecutor().command(FileUtil.KILL_APP_PATH, "-SIGINT", Integer.toString(pid)).readOutput(
-                 true)
-                                       .start().getFuture();
-         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
-         if (processResult.getExitValue() == 0) {
-            success = true;
-         }
-      } catch (Exception e) {
-         LOG.error("Error executing getSwarmPID: {}", e);
-      }
-      return success;
-   }
-
    public static boolean killSwarmWindow(String windowName) {
       boolean       success       = true;
       ProcessResult processResult = null;
@@ -165,14 +142,80 @@ public class SwarmExecutor {
       return success;
    }
 
+   public static boolean sigIntSwarm(int pid) {
+      boolean               success = false;
+      Future<ProcessResult> future;
+      try {
+         future = new ProcessExecutor().command(FileUtil.KILL_APP_PATH, "-SIGINT", Integer.toString(pid)).readOutput(
+                 true)
+                                       .start().getFuture();
+         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
+         if (processResult.getExitValue() == 0) {
+            success = true;
+         }
+      } catch (Exception e) {
+         LOG.error("Error executing getSwarmPID: {}", e);
+      }
+      return success;
+   }
+
    public static Process startSwarmInstance(String... command) {
       Process process = null;
       try {
-         process = new ProcessExecutor().command(command).readOutput(true).start().getProcess();
+         String teeLogFilename = getLogFilename(command);
+         process = new ProcessExecutor().command(command).environment("LOGFILE", teeLogFilename).readOutput(true)
+                                        .start().getProcess();
       } catch (Exception e) {
          LOG.error("Error executing startSwarmInstance: {}", e);
       }
       return process;
+   }
+
+   private static String getLogFilename(String[] command) {
+      String logFilename;
+      String jarArg = null;
+      String uidArg = null;
+      for (String cliArg : command) {
+         if (cliArg.toLowerCase().contains(".jar")) {
+            int endIndex = cliArg.indexOf(".jar");
+            jarArg = cliArg.substring(0, endIndex) + "_";
+         } else if (cliArg.toLowerCase().contains("-duid=")) {
+            int startIndex = cliArg.indexOf("=");
+            uidArg = cliArg.substring(startIndex + 1, cliArg.length());
+         }
+      }
+      logFilename = jarArg != null ? jarArg : "swarm_unknown_jar_";
+      logFilename = logFilename + (uidArg != null ? uidArg : System.currentTimeMillis());
+
+      return logFilename + ".log";
+   }
+
+   public static boolean waitForServiceRegistration(String consulServiceHealthUrl, int waitTimeout, int waitMillis) {
+      Predicate<Integer> waitForServiceRegistrationPred = (Integer time) -> {
+         boolean      success     = false;
+         StringBuffer urlContents = NetUtils.getUrlContent(consulServiceHealthUrl);
+         if (!urlContents.toString().equalsIgnoreCase("[]")) {
+            success = true;
+         }
+         return success;
+      };
+      return waitLoop(waitForServiceRegistrationPred, waitTimeout, waitMillis);
+   }
+
+   private static boolean waitLoop(Predicate<Integer> predicate, int waitTimeout, int waitMillis) {
+      boolean successfulRun = false;
+      int     timeWaited    = 0;
+      while (SwarmExecutor.waitFor(waitMillis)) {
+         if (predicate.test(timeWaited)) {
+            successfulRun = true;
+            break;
+         }
+         if (timeWaited > waitTimeout) {
+            break;
+         }
+         timeWaited++;
+      }
+      return successfulRun;
    }
 
    public static boolean waitFor(long millis) {

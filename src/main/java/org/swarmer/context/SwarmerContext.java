@@ -10,12 +10,16 @@ import java.util.List;
 
 
 public class SwarmerContext {
-   private static final Logger         LOG                       = LogManager.getLogger(SwarmerContext.class);
-   private static final String         SETTING_JAVA_PATH         = "java.path";
-   private static final String         SETTING_LOCK_WAIT_TIMEOUT = "lock.wait.timeout";
-   private static final String         SETTING_SWARM_PORT_LOWER  = "swarm.port.lower";
-   private static final String         SETTING_SWARM_PORT_UPPER  = "swarm.port.upper";
-   private static       SwarmerContext ctxInstance               = null;
+   private static final Logger         LOG                           = LogManager.getLogger(SwarmerContext.class);
+   private static final String         SETTING_JAVA_PATH             = "java.path";
+   private static final String         SETTING_LOCK_WAIT_TIMEOUT     = "lock.wait.timeout";
+   private static final String         SETTING_SWARM_PORT_LOWER      = "swarm.port.lower";
+   private static final String         SETTING_SWARM_PORT_UPPER      = "swarm.port.upper";
+   private static final String         SETTING_SWARM_STARTUP_TIMEOUT = "swarm.default.startup.time";
+   private static       SwarmerContext ctxInstance                   = null;
+
+   protected Ini.Section               defaultSection;
+   protected List<DeploymentContainer> deploymentContainers;
 
    public static SwarmerContext instance() {
       return ctxInstance;
@@ -29,9 +33,6 @@ public class SwarmerContext {
       SwarmerContext.ctxInstance = ctxInstance;
    }
 
-   protected Ini.Section               defaultSection;
-   protected List<DeploymentContainer> deploymentContainers;
-
    private SwarmerContext() {
       this.deploymentContainers = new ArrayList<DeploymentContainer>();
    }
@@ -39,6 +40,11 @@ public class SwarmerContext {
    private SwarmerContext(Builder builder) {
       this.deploymentContainers = builder.deploymentContainers;
       this.defaultSection = builder.defaultSection;
+   }
+
+   public DeploymentContainer[] getDeploymentContainers() {
+      DeploymentContainer[] resultArray = new DeploymentContainer[deploymentContainers.size()];
+      return deploymentContainers.toArray(resultArray);
    }
 
    public String getJavaPath() {
@@ -59,12 +65,14 @@ public class SwarmerContext {
    public IntRange getPortRange() {
       int defaultLowerPort = 8000;
       int defaultUpperPort = 10000;
+
+      defaultLowerPort = Integer.parseInt(defaultSection.get(SETTING_SWARM_PORT_LOWER, "8000"));
+      defaultUpperPort = Integer.parseInt(defaultSection.get(SETTING_SWARM_PORT_UPPER, "10000"));
       return new IntRange(defaultLowerPort, defaultUpperPort);
    }
 
-   public DeploymentContainer[] getDeploymentContainers() {
-      DeploymentContainer[] resultArray = new DeploymentContainer[deploymentContainers.size()];
-      return deploymentContainers.toArray(resultArray);
+   public int getSwarmStartupTimeout() {
+      return Integer.parseInt(defaultSection.get(SETTING_SWARM_STARTUP_TIMEOUT, "300"));
    }
 
    public static class Builder extends SwarmerContext {

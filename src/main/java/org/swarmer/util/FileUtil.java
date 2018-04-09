@@ -14,8 +14,9 @@ import java.util.Random;
 
 public class FileUtil {
 
-   public static final  String KILL_APP_PATH = System.getProperty("java.io.tmpdir") + "\\windows-kill.exe";
-   private static final Logger LOG           = LogManager.getLogger(FileUtil.class);
+   public static final  String KILL_APP_PATH    = System.getProperty("java.io.tmpdir") + "\\windows-kill.exe";
+   public static final  String WIN_TEE_APP_PATH = System.getProperty("java.io.tmpdir") + "\\wintee.exe";
+   private static final Logger LOG              = LogManager.getLogger(FileUtil.class);
 
    public static boolean canObtainExclusiveLock(Path source) {
       boolean canObtainExclusiveLock = false;
@@ -34,36 +35,43 @@ public class FileUtil {
             if (canObtainExclusiveLock) {
                LOG.info("File [{}] EXCLUSIVELY LOCKED.", sourceFile.getAbsolutePath());
             } else {
-               LOG.warn("File [{}] NOT EXCLUSIVELY LOCKED.", sourceFile.getAbsolutePath());
+               LOG.warn("File [{}] COULD NOT BE EXCLUSIVELY LOCKED.", sourceFile.getAbsolutePath());
             }
          } catch (Exception e) {
             LOG.error("Error when canObtainExclusiveLock: {}", e);
          }
       }
 
-
       return canObtainExclusiveLock;
    }
 
-   public static boolean copyWindowsKillAppToTmp() {
+   public static boolean copyWinTeeAppToTmp() {
+      return copyAppToTmp("/wintee.exe", WIN_TEE_APP_PATH);
+   }
+
+   private static boolean copyAppToTmp(String resourcePath, String targetpath) {
       boolean      success   = true;
       InputStream  inStream  = null;
       OutputStream outStream = null;
       try {
-         inStream = SwarmExecutor.class.getResourceAsStream("/windows-kill.exe");
-         outStream = new FileOutputStream(KILL_APP_PATH);
+         inStream = SwarmExecutor.class.getResourceAsStream(resourcePath);
+         outStream = new FileOutputStream(targetpath);
          byte[] buffer = new byte[1024];
          int    length;
          while ((length = inStream.read(buffer)) > 0) {
             outStream.write(buffer, 0, length);
          }
       } catch (Exception e) {
-         LOG.error("Error executing copyWindowsKillAppToTmp: {}", e);
+         LOG.error("Error executing copyAppToTmp: {}", e);
          success = false;
       }
       CloseableUtil.close(inStream);
       CloseableUtil.close(outStream);
       return success;
+   }
+
+   public static boolean copyWindowsKillAppToTmp() {
+      return copyAppToTmp("/windows-kill.exe", KILL_APP_PATH);
    }
 
    public static CopyProgress createCopyProgress(long fileLength) {
@@ -135,6 +143,11 @@ public class FileUtil {
    public static boolean windowsKillAppExists() {
       File windowsKillFile = new File(KILL_APP_PATH);
       return windowsKillFile.exists();
+   }
+
+   public static boolean winTeeAppExists() {
+      File winTeeFile = new File(WIN_TEE_APP_PATH);
+      return winTeeFile.exists();
    }
 
    public static class CopyProgress {
