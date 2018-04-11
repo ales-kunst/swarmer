@@ -31,7 +31,6 @@ public class SwarmDeployer {
                }
             }
          }
-         // System.out.println("-------------- Running Swarm Deployer --------------");
          SwarmExecutor.waitFor(1000);
       }
    }

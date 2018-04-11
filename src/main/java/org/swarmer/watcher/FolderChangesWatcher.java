@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class FolderChangesWatcher {
 
@@ -26,41 +27,72 @@ public class FolderChangesWatcher {
       watchService = null;
    }
 
-   private WatchService createDefaultWatchService() throws IOException {
-      return FileSystems.getDefault().newWatchService();
-   }
-
-   private Path getDestPath(WatchKey queuedKey, WatchEvent<?> watchEvent) {
-      // this is not a complete path
-      Path file = (Path) watchEvent.context();
-      // need to get parent path
-      SwarmConfig swarmConfig = folderChangesCtx.getSwarmConfig(queuedKey);
-      Path        parentPath  = swarmConfig.getTargetPath().toPath();
-
-      return parentPath.resolve(file);
-   }
-
-   private Path getFullPath(WatchKey queuedKey, WatchEvent<?> watchEvent) {
-      Path watchEventFile   = (Path) watchEvent.context();
-      Path watchEventFolder = (Path) queuedKey.watchable();
-
-      return watchEventFolder.resolve(watchEventFile);
-   }
-
-   private String getWatchEventsInfo(WatchKey queuedKey, List<WatchEvent<?>> pollEvents) {
-      StringBuilder sb = new StringBuilder();
-      for (WatchEvent<?> watchEvent : pollEvents) {
-         Path srcPath = getFullPath(queuedKey, watchEvent);
-         sb.append(String.format("| %s : %s ", watchEvent.kind(), srcPath));
+   public void watch() throws IOException, InterruptedException {
+      initializeWatcher();
+      registerFolders();
+      try {
+         watchLoop(watchService);
+      } finally {
+         watchService.close();
+         folderChangesCtx.reset();
       }
-      sb.append("|");
-
-      return sb.toString();
    }
 
    private void initializeWatcher() throws IOException {
       folderChangesCtx = new FolderChangesContext();
       watchService = createDefaultWatchService();
+   }
+
+   private void registerFolders() throws IOException {
+      DeploymentContainer[] deploymentContainers = SwarmerContext.instance().getDeploymentContainers();
+      for (DeploymentContainer deploymentContainer : deploymentContainers) {
+         File srcFolder = deploymentContainer.getSourcePath();
+         if (srcFolder.exists() && srcFolder.isDirectory()) {
+            Path     srcPath = srcFolder.toPath();
+            WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+            folderChangesCtx.addSwarmDeployment(key, deploymentContainer);
+            LOG.info("Registered folder [{}] for watch.", srcFolder);
+         } else {
+            String msg = String.format("Folder [%s] does not exist!", srcFolder.getAbsolutePath());
+            LOG.error(msg);
+            throw new IOException(msg);
+         }
+      }
+   }
+
+   private void watchLoop(WatchService watchService) throws InterruptedException {
+      boolean folderChangesStarted = false;
+      while (true) {
+         if (!folderChangesStarted) {
+            LOG.info("Folder changes watcher started.");
+            folderChangesStarted = true;
+         }
+
+         WatchKey queuedKey = watchService.poll(1000, TimeUnit.MILLISECONDS);
+
+         if (queuedKey == null) continue;
+
+         try {
+            processWatchEvents(queuedKey);
+         } catch (Exception e) {
+            LOG.error("Exception from processWatchEvents: [{}]. Continue with watch.", e.getMessage());
+         }
+
+         if (!queuedKey.reset()) {
+            LOG.info("Removed WatchKey {}.", queuedKey.toString());
+            folderChangesCtx.remove(queuedKey);
+         }
+         if (folderChangesCtx.isEmpty()) {
+            LOG.info("Folder changes map is empty. Going out of loop for folder changes watching.",
+                     queuedKey.toString());
+            break;
+         }
+      }
+      LOG.warn("Folder changes watcher ended.");
+   }
+
+   private WatchService createDefaultWatchService() throws IOException {
+      return FileSystems.getDefault().newWatchService();
    }
 
    private void processWatchEvents(WatchKey queuedKey) {
@@ -93,6 +125,24 @@ public class FolderChangesWatcher {
          }
       }
       LOG.info("Ended polling watch events [size: {}]\n", pollEvents.size());
+   }
+
+   private String getWatchEventsInfo(WatchKey queuedKey, List<WatchEvent<?>> pollEvents) {
+      StringBuilder sb = new StringBuilder();
+      for (WatchEvent<?> watchEvent : pollEvents) {
+         Path srcPath = getFullPath(queuedKey, watchEvent);
+         sb.append(String.format("| %s : %s ", watchEvent.kind(), srcPath));
+      }
+      sb.append("|");
+
+      return sb.toString();
+   }
+
+   private Path getFullPath(WatchKey queuedKey, WatchEvent<?> watchEvent) {
+      Path watchEventFile   = (Path) watchEvent.context();
+      Path watchEventFolder = (Path) queuedKey.watchable();
+
+      return watchEventFolder.resolve(watchEventFile);
    }
 
    private void processModifyEvent(WatchKey queuedKey, WatchEvent<?> watchEvent) {
@@ -135,60 +185,13 @@ public class FolderChangesWatcher {
       }
    }
 
-   private void registerFolders() throws IOException {
-      DeploymentContainer[] swarmInstances = SwarmerContext.instance().getDeploymentContainers();
-      for (DeploymentContainer swarmInstance : swarmInstances) {
-         File srcFolder = swarmInstance.getSourcePath();
-         if (srcFolder.exists() && srcFolder.isDirectory()) {
-            Path     srcPath = srcFolder.toPath();
-            WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
-            folderChangesCtx.addSwarmDeployment(key, swarmInstance);
-            LOG.info("Registered folder [{}] for watch.", srcFolder);
-         } else {
-            String msg = String.format("Folder [%s] does not exist!", srcFolder.getAbsolutePath());
-            LOG.error(msg);
-            throw new IOException(msg);
-         }
-      }
-   }
+   private Path getDestPath(WatchKey queuedKey, WatchEvent<?> watchEvent) {
+      // this is not a complete path
+      Path file = (Path) watchEvent.context();
+      // need to get parent path
+      SwarmConfig swarmConfig = folderChangesCtx.getSwarmConfig(queuedKey);
+      Path        parentPath  = swarmConfig.getTargetPath().toPath();
 
-   public void watch() throws IOException, InterruptedException {
-      initializeWatcher();
-      registerFolders();
-      try {
-         watchLoop(watchService);
-      } finally {
-         watchService.close();
-         folderChangesCtx.reset();
-      }
-   }
-
-   private void watchLoop(WatchService watchService) throws InterruptedException {
-      boolean folderChangesStarted = false;
-      while (true) {
-         if (!folderChangesStarted) {
-            LOG.info("Folder changes watcher started.");
-            folderChangesStarted = true;
-         }
-
-         WatchKey queuedKey = watchService.take();
-
-         try {
-            processWatchEvents(queuedKey);
-         } catch (Exception e) {
-            LOG.error("Exception from processWatchEvents: [{}]. Continue with watch.", e.getMessage());
-         }
-
-         if (!queuedKey.reset()) {
-            LOG.info("Removed WatchKey {}.", queuedKey.toString());
-            folderChangesCtx.remove(queuedKey);
-         }
-         if (folderChangesCtx.isEmpty()) {
-            LOG.info("Folder changes map is empty. Going out of loop for folder changes watching.",
-                     queuedKey.toString());
-            break;
-         }
-      }
-      LOG.warn("Folder changes watcher ended.");
+      return parentPath.resolve(file);
    }
 }
