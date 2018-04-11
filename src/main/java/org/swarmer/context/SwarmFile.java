@@ -22,28 +22,32 @@ public class SwarmFile {
       copyProgress = FileUtil.createCopyProgress(fileSize);
    }
 
-   public Exception getException() {
-      return exception;
-   }
-
-   public State getState() {
-      return state;
+   public String getAbsolutePath() {
+      return swarmFile.getAbsolutePath();
    }
 
    public FileUtil.CopyProgress getCopyProgress() {
       return copyProgress;
    }
 
-   public void setState(State state) {
-      setState(state, null);
+   public Exception getException() {
+      return exception;
+   }
+
+   public File getFile() { return swarmFile; }
+
+   public String getFilename() { return swarmFile.getName(); }
+
+   public boolean isSuccess() {
+      return getException() == null;
+   }
+
+   public State getState() {
+      return state;
    }
 
    public boolean isError() {
       return getException() != null;
-   }
-
-   public boolean isSuccess() {
-      return getException() == null;
    }
 
    public void setState(State state, Exception exception) {
@@ -51,8 +55,8 @@ public class SwarmFile {
       this.exception = exception;
    }
 
-   public String getAbsolutePath() {
-      return swarmFile.getAbsolutePath();
+   public void setState(State state) {
+      setState(state, null);
    }
 
    public boolean isValid(File file) {
@@ -60,6 +64,6 @@ public class SwarmFile {
    }
 
    public enum State {
-      COPYING, ERROR_COPYING, COPIED, SWARM_PORT_TAKEN, STARTING_SWARM, ERROR_STARTING_SWARM, SWARM_STARZED, SHUTDOWN_SWARM
+      COPYING, ERROR_COPYING, COPIED, SWARM_PORT_TAKEN, STARTING_SWARM, ERROR_STARTING_SWARM, SWARM_STARTED, SHUTDOWN_SWARM
    }
 }

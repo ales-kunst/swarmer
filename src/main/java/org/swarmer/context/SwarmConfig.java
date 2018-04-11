@@ -10,13 +10,12 @@ import java.util.regex.Pattern;
 
 public class SwarmConfig {
 
-   public static final String BLUE_JAVA_PARAMS      = "blue.jvm.params";
-   public static final String FILE_PATTERN          = "file.pattern";
-   public static final String GREEN_JAVA_PARAMS     = "green.jvm.params";
-   public static final String SOURCE_PATH           = "src.folder";
-   // public static final String SWARM_BIND_ADDRESS_REGEX = "-D(swarm\\.bind\\.address=([0-9\\.]+))";
-   public static final String SWARM_HTTP_PORT_REGEX = "-D(swarm\\.http\\.port=([0-9]+))";
-   public static final String TARGET_PATH           = "dest.folder";
+   public static final String BLUE_JAVA_PARAMS          = "blue.jvm.params";
+   public static final String CONSUL_HEALTH_SERVICE_URL = "consul.service.health.url";
+   public static final String FILE_PATTERN              = "file.pattern";
+   public static final String GREEN_JAVA_PARAMS         = "green.jvm.params";
+   public static final String SOURCE_PATH               = "src.folder";
+   public static final String TARGET_PATH               = "dest.folder";
 
    private static final Logger      LOG = LogManager.getLogger(SwarmConfig.class);
    private final        File        destPath;
@@ -35,10 +34,18 @@ public class SwarmConfig {
       this.destPath = new File(getDestPathFromIni());
    }
 
-   public int getBlueUrlPort() {
-      String portString = getJavaParamValue(getBlueJvmParams(), SWARM_HTTP_PORT_REGEX);
-      int    port       = (portString == null) ? 8080 : Integer.parseInt(portString);
-      return port;
+   public String getBlueJvmParams() { return section.get(BLUE_JAVA_PARAMS); }
+
+   public String getConsulHealthServiceUrl() {
+      return section.get(CONSUL_HEALTH_SERVICE_URL);
+   }
+
+   public String getGreenJvmParams() {
+      return section.get(GREEN_JAVA_PARAMS);
+   }
+
+   private String getDestPathFromIni() {
+      return section.get(TARGET_PATH);
    }
 
    protected String getJavaParamValue(String javaParams, String regex) {
@@ -59,28 +66,6 @@ public class SwarmConfig {
          LOG.trace("Pattern {} do not match in params: [{}]", regex, javaParams);
       }
       return result;
-   }
-
-   public String getBlueJvmParams() {
-      return section.get(BLUE_JAVA_PARAMS);
-   }
-
-   public int getGreenUrlPort() {
-      String portString = getJavaParamValue(getGreenJvmParams(), SWARM_HTTP_PORT_REGEX);
-      int    port       = (portString == null) ? 8080 : Integer.parseInt(portString);
-      return port;
-   }
-
-   public String getGreenJvmParams() {
-      return section.get(GREEN_JAVA_PARAMS);
-   }
-
-   private String getDestPathFromIni() {
-      return section.get(TARGET_PATH);
-   }
-
-   private String getSrcPathFromIni() {
-      return section.get(SOURCE_PATH);
    }
 
    public String getName() {
@@ -104,5 +89,9 @@ public class SwarmConfig {
 
    private String getFilenamePatternFromIni() {
       return section.get(FILE_PATTERN);
+   }
+
+   private String getSrcPathFromIni() {
+      return section.get(SOURCE_PATH);
    }
 }

@@ -7,6 +7,7 @@ import org.swarmer.context.SwarmConfig;
 import org.swarmer.context.SwarmFile;
 import org.swarmer.context.SwarmerContext;
 import org.swarmer.util.FileUtil;
+import org.swarmer.util.SwarmExecutor;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,47 +63,7 @@ public class FolderChangesWatcher {
       watchService = createDefaultWatchService();
    }
 
-   private void processModifyEvent(WatchKey queuedKey, WatchEvent<?> watchEvent) throws IOException {
-      Path srcPath  = getFullPath(queuedKey, watchEvent);
-      Path destPath = getDestPath(queuedKey, watchEvent);
-
-      boolean canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
-
-      if (!canSrcFileBeLocked) {
-         try {
-            LOG.trace("Sleep for {} ms", SwarmerContext.instance().getLockWaitTimeout());
-            Thread.sleep(SwarmerContext.instance().getLockWaitTimeout());
-         } catch (InterruptedException e) {}
-         canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
-      }
-      // Remove Dest file only if it exists and src file can be locked
-      boolean destFileExists =
-              (destPath.toFile().exists() && canSrcFileBeLocked) ? !FileUtil.removeFile(destPath) : false;
-      boolean fileAccessConditionsOk = canSrcFileBeLocked && !destFileExists;
-
-      if (!canSrcFileBeLocked) {
-         LOG.warn("File not copied because source file can not be locked.");
-      } else if (destFileExists) {
-         LOG.error("Destination file [{}] is locked by another process.", destPath);
-      } else if (fileAccessConditionsOk) {
-         folderChangesCtx.addCheckedFileForLocking(srcPath.toFile());
-         LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
-                  srcPath.toFile().length());
-         DeploymentContainer deploymentContainer = folderChangesCtx.getSwarmDeployment(queuedKey);
-         long                fileSize            = srcPath.toFile().length();
-         SwarmFile swarmFile = deploymentContainer
-                 .addSwarmFile(destPath.toFile(), SwarmFile.State.COPYING, fileSize);
-         try {
-            FileUtil.nioBufferCopy(srcPath.toFile(), destPath.toFile(), swarmFile.getCopyProgress());
-         } catch (Exception e) {
-            swarmFile.setState(SwarmFile.State.ERROR_COPYING, e);
-            throw e;
-         }
-         swarmFile.setState(SwarmFile.State.COPIED);
-      }
-   }
-
-   private void processWatchEvents(WatchKey queuedKey) throws IOException {
+   private void processWatchEvents(WatchKey queuedKey) {
       // If we do it in this way then we poll current events and remove them from list. Must be done in such a way
       // because every call to this function gets fresh list from event list. Do NOT put queuedKey.pollEvents() in the
       // for loop (e.g. for (WatchEvent<?> watchEvent : queuedKey.pollEvents()) {})
@@ -132,6 +93,46 @@ public class FolderChangesWatcher {
          }
       }
       LOG.info("Ended polling watch events [size: {}]\n", pollEvents.size());
+   }
+
+   private void processModifyEvent(WatchKey queuedKey, WatchEvent<?> watchEvent) {
+      Path srcPath  = getFullPath(queuedKey, watchEvent);
+      Path destPath = getDestPath(queuedKey, watchEvent);
+
+      boolean canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
+
+      if (!canSrcFileBeLocked) {
+         LOG.trace("Sleep for {} ms", SwarmerContext.instance().getLockWaitTimeout());
+         SwarmExecutor.waitFor(SwarmerContext.instance().getLockWaitTimeout());
+         canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
+      }
+      // Remove Dest file only if it exists and src file can be locked
+      boolean destFileExists =
+              (destPath.toFile().exists() && canSrcFileBeLocked) && !FileUtil.removeFile(destPath);
+      boolean fileAccessConditionsOk = canSrcFileBeLocked && !destFileExists;
+
+      if (!canSrcFileBeLocked) {
+         LOG.warn("File not copied because source file can not be locked.");
+      } else if (destFileExists) {
+         // We have to add that the lock has happened for next two events should be ignored
+         folderChangesCtx.addCheckedFileForLocking(srcPath.toFile());
+         LOG.error("Destination file [{}] is locked by another process.", destPath);
+      } else if (fileAccessConditionsOk) {
+         folderChangesCtx.addCheckedFileForLocking(srcPath.toFile());
+         LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
+                  srcPath.toFile().length());
+         DeploymentContainer deploymentContainer = folderChangesCtx.getSwarmDeployment(queuedKey);
+         long                fileSize            = srcPath.toFile().length();
+         SwarmFile swarmFile = deploymentContainer.addSwarmFile(destPath.toFile(),
+                                                                SwarmFile.State.COPYING, fileSize);
+         try {
+            FileUtil.nioBufferCopy(srcPath.toFile(), destPath.toFile(), swarmFile.getCopyProgress());
+         } catch (Exception e) {
+            swarmFile.setState(SwarmFile.State.ERROR_COPYING, e);
+            throw e;
+         }
+         swarmFile.setState(SwarmFile.State.COPIED);
+      }
    }
 
    private void registerFolders() throws IOException {

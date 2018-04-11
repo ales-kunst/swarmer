@@ -2,21 +2,22 @@ package org.swarmer.context;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.swarmer.exception.ExceptionThrower;
-import org.swarmer.exception.SwarmerException;
+import org.swarmer.util.SwarmExecutor;
 
 public class SwarmDeployment {
    private static final Logger    LOG = LogManager.getLogger(SwarmDeployment.class);
    private              int       port;
    private              Process   process;
    private              long      processTimeStart;
+   private              String[]  swarmCommand;
    private              SwarmFile swarmFile;
+   private              String    windowTitle;
 
 
    public SwarmDeployment(SwarmFile swarmFile, int port) {
       this.swarmFile = swarmFile;
       this.process = null;
-      this.processTimeStart = -1;
+      this.processTimeStart = System.currentTimeMillis();
       this.port = port;
    }
 
@@ -26,21 +27,59 @@ public class SwarmDeployment {
       return processTimeStart;
    }
 
+   public String getLogFilename() {
+      return SwarmExecutor.getLogFilename(swarmCommand);
+   }
+
+   public String[] getSwarmCommand() {
+      return swarmCommand;
+   }
+
    public SwarmFile getSwarmFile() {
       return swarmFile;
    }
 
-   public void setProcess(Process process) throws SwarmerException {
-      if (process != null) {
+   public void setSwarmCommand(String[] swarmCommand) {
+      this.swarmCommand = swarmCommand;
+   }
+
+   public String getWindowTitle() {
+      return windowTitle;
+   }
+
+   public void setWindowTitle(String windowTitle) {
+      this.windowTitle = windowTitle;
+   }
+
+   public void hardKillSwarm() {
+      SwarmExecutor.killSwarmWindow(windowTitle);
+   }
+
+   public void setProcess(Process process) {
+      if (this.process != null) {
          String msg = String.format("Process already exists %s", process);
          LOG.error(msg);
-         ExceptionThrower.throwSwarmerException(msg);
       }
-      this.processTimeStart = System.currentTimeMillis();
       this.process = process;
    }
 
    public void setSwarmState(SwarmFile.State state, Exception e) {
       swarmFile.setState(state, e);
+   }
+
+   public void sigIntProces() {
+      int pid = getPid();
+      if (pid != -1) {
+         SwarmExecutor.sigIntSwarm(pid);
+      }
+   }
+
+   public int getPid() {
+      return SwarmExecutor.getSwarmPID(swarmFile.getFilename(), processTimeStart);
+   }
+
+   public boolean waitForSwarmToShutdown() {
+      boolean swarmExited = SwarmExecutor.waitUntilSwarmProcExits(swarmFile.getFilename(), processTimeStart, 300, 1000);
+      return swarmExited;
    }
 }

@@ -15,6 +15,7 @@ import java.util.function.Predicate;
 
 
 public class SwarmExecutor {
+   public static final  String UID_JVM_ARG           = "-Duid=";
    private static final String CMD_COMMAND           = "cmd.exe";
    private static final String JAR_OPTION            = "-jar";
    private static final String JAVA_COMMAND          = "java";
@@ -24,10 +25,10 @@ public class SwarmExecutor {
    private static final String START_COMMAND         = "start";
    private static final String START_PATH_OPTION     = "/D";
 
-
-   public static String[] createSwarmCliArguments(String windowTitle, String port, String jvmArgs, String appArgs,
+   public static String[] createSwarmCliArguments(String windowTitle, String port, String jvmArgs, long uid,
+                                                  String appArgs,
                                                   File swarmJar) {
-      final String JVM_ARG_DELIMETER = "-";
+      final String JVM_ARG_DELIMETER = "-D";
       final String APP_ARG_DELIMETER = " ";
       List<String> cliArgs           = new ArrayList<>();
       cliArgs.add(CMD_COMMAND);
@@ -40,6 +41,7 @@ public class SwarmExecutor {
       }
       cliArgs.add(FileUtil.WIN_TEE_APP_PATH);
       cliArgs.add(JAVA_COMMAND);
+      cliArgs.add(UID_JVM_ARG + uid);
       cliArgs.add(JVM_SWARM_PORT_OPTION + port);
       cliArgs.addAll(parseArgs(jvmArgs, JVM_ARG_DELIMETER));
       cliArgs.add(JAR_OPTION);
@@ -59,45 +61,6 @@ public class SwarmExecutor {
       }
       CloseableUtil.close(sc);
       return resultArgs;
-   }
-
-   public static int getSwarmPID(String swarmJar, long uid) {
-      int                   pid    = -1;
-      Future<ProcessResult> future = null;
-      try {
-         future = new ProcessExecutor().command("jps.exe", "-mlv").readOutput(true)
-                                       .start().getFuture();
-         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
-         pid = parsePID(processResult.outputUTF8(), swarmJar, uid);
-      } catch (Exception e) {
-         LOG.error("Error executing getSwarmPID: {}", e);
-      }
-      return pid;
-   }
-
-   private static int parsePID(String content, String swarmJar, long uid) {
-      int     pid  = -1;
-      Scanner sc   = new Scanner(content);
-      String  line = null;
-      while (sc.hasNextLine() || (line == null)) {
-         line = sc.nextLine();
-         if (line.contains(swarmJar) && line.contains("-Duid=" + uid)) {
-            Scanner sc_pid = new Scanner(line);
-            pid = sc_pid.nextInt();
-            break;
-         }
-      }
-      return pid;
-   }
-
-   public static boolean isProcessLiving(Process process) {
-      boolean isAlive = true;
-      try {
-         process.exitValue();
-      } catch (IllegalThreadStateException e) {
-         isAlive = false;
-      }
-      return isAlive;
    }
 
    public static boolean javaProcessStatusToolExists() {
@@ -146,9 +109,8 @@ public class SwarmExecutor {
       boolean               success = false;
       Future<ProcessResult> future;
       try {
-         future = new ProcessExecutor().command(FileUtil.KILL_APP_PATH, "-SIGINT", Integer.toString(pid)).readOutput(
-                 true)
-                                       .start().getFuture();
+         future = new ProcessExecutor().command(FileUtil.KILL_APP_PATH, "-SIGINT", Integer.toString(pid))
+                                       .readOutput(true).start().getFuture();
          ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
          if (processResult.getExitValue() == 0) {
             success = true;
@@ -171,7 +133,7 @@ public class SwarmExecutor {
       return process;
    }
 
-   private static String getLogFilename(String[] command) {
+   public static String getLogFilename(String[] command) {
       String logFilename;
       String jarArg = null;
       String uidArg = null;
@@ -179,7 +141,7 @@ public class SwarmExecutor {
          if (cliArg.toLowerCase().contains(".jar")) {
             int endIndex = cliArg.indexOf(".jar");
             jarArg = cliArg.substring(0, endIndex) + "_";
-         } else if (cliArg.toLowerCase().contains("-duid=")) {
+         } else if (cliArg.toLowerCase().contains(UID_JVM_ARG)) {
             int startIndex = cliArg.indexOf("=");
             uidArg = cliArg.substring(startIndex + 1, cliArg.length());
          }
@@ -190,7 +152,10 @@ public class SwarmExecutor {
       return logFilename + ".log";
    }
 
-   public static boolean waitForServiceRegistration(String consulServiceHealthUrl, int waitTimeout, int waitMillis) {
+   public static boolean waitForServiceRegistration(Process process, String consulServiceHealthUrl,
+                                                    int appWaitTimeoutSeconds,
+                                                    long loopWaitMillis) {
+      // Lambda expression
       Predicate<Integer> waitForServiceRegistrationPred = (Integer time) -> {
          boolean      success     = false;
          StringBuffer urlContents = NetUtils.getUrlContent(consulServiceHealthUrl);
@@ -199,18 +164,19 @@ public class SwarmExecutor {
          }
          return success;
       };
-      return waitLoop(waitForServiceRegistrationPred, waitTimeout, waitMillis);
+      return waitLoop(process, waitForServiceRegistrationPred, appWaitTimeoutSeconds, loopWaitMillis);
    }
 
-   private static boolean waitLoop(Predicate<Integer> predicate, int waitTimeout, int waitMillis) {
+   private static boolean waitLoop(Process process, Predicate<Integer> predicate, int waitTimeout,
+                                   long loopWaitMillis) {
       boolean successfulRun = false;
       int     timeWaited    = 0;
-      while (SwarmExecutor.waitFor(waitMillis)) {
+      while (true) {
+         waitFor(loopWaitMillis);
          if (predicate.test(timeWaited)) {
             successfulRun = true;
             break;
-         }
-         if (timeWaited > waitTimeout) {
+         } else if (timeWaited > waitTimeout) {
             break;
          }
          timeWaited++;
@@ -227,6 +193,52 @@ public class SwarmExecutor {
       }
 
       return success;
+   }
+
+   public static boolean waitUntilSwarmProcExits(String swarmJar, long uid, int shutdownTimeoutSeconds,
+                                                 long loopWaitMillis) {
+      boolean processExited = false;
+      int     timeWaited    = 0;
+      while (true) {
+         waitFor(loopWaitMillis);
+         if (getSwarmPID(swarmJar, uid) == -1) {
+            processExited = true;
+            break;
+         } else if (timeWaited > shutdownTimeoutSeconds) {
+            break;
+         }
+         timeWaited++;
+      }
+      return processExited;
+   }
+
+   public static int getSwarmPID(String swarmJar, long uid) {
+      int                   pid    = -1;
+      Future<ProcessResult> future = null;
+      try {
+         future = new ProcessExecutor().command("jps.exe", "-mlv").readOutput(true)
+                                       .start().getFuture();
+         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
+         pid = parsePID(processResult.outputUTF8(), swarmJar, uid);
+      } catch (Exception e) {
+         LOG.error("Error executing getSwarmPID: {}", e);
+      }
+      return pid;
+   }
+
+   private static int parsePID(String content, String swarmJar, long uid) {
+      int     pid  = -1;
+      Scanner sc   = new Scanner(content);
+      String  line = null;
+      while (sc.hasNextLine() || (line == null)) {
+         line = sc.nextLine();
+         if (line.contains(swarmJar) && line.contains("-Duid=" + uid)) {
+            Scanner sc_pid = new Scanner(line);
+            pid = sc_pid.nextInt();
+            break;
+         }
+      }
+      return pid;
    }
 
    private SwarmExecutor() {}

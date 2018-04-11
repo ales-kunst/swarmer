@@ -15,6 +15,7 @@ public class DeploymentContainer {
 
    private static final Logger      LOG                         = LogManager.getLogger(DeploymentContainer.class);
    private final        Object      DEPLOYMENT_IN_PROGRESS_LOCK = new Object();
+   private final        Object      FILES_QUEUE_LOCK            = new Object();
    private final        SwarmConfig swarmConfig;
 
    private boolean                               deploymentInProgress;
@@ -32,18 +33,25 @@ public class DeploymentContainer {
    }
 
    public SwarmFile addSwarmFile(File file, SwarmFile.State fileState, long fileSize) {
-      SwarmFile swarmFile = new SwarmFile(file, fileState, fileSize);
-      swarmFilesQueue.add(swarmFile);
+      SwarmFile swarmFile = null;
+      synchronized (FILES_QUEUE_LOCK) {
+         swarmFile = new SwarmFile(file, fileState, fileSize);
+         swarmFilesQueue.add(swarmFile);
+      }
+
       return swarmFile;
    }
 
    public SwarmFile getLastSwarmFile(SwarmFile.State fileState) {
       SwarmFile resultSwarmFile = null;
-      for (SwarmFile swarmFile : swarmFilesQueue) {
-         if (swarmFile.getState().equals(fileState)) {
-            resultSwarmFile = swarmFile;
+      synchronized (FILES_QUEUE_LOCK) {
+         for (SwarmFile swarmFile : swarmFilesQueue) {
+            if (swarmFile.getState().equals(fileState)) {
+               resultSwarmFile = swarmFile;
+            }
          }
       }
+
       return resultSwarmFile;
    }
 
@@ -79,17 +87,10 @@ public class DeploymentContainer {
       }
    }
 
-   public DeploymentColor freeDeploymentColor() {
-      if (swarmDeployments.get(DeploymentColor.BLUE) == null) {
-         return DeploymentColor.BLUE;
-      } else if (swarmDeployments.get(DeploymentColor.GREEN) == null) {
-         return DeploymentColor.GREEN;
-      }
-      return null;
-   }
+   public File getSourcePath() { return getSwarmConfig().getSourcePath(); }
 
-   public SwarmDeployment getDeployment(DeploymentColor color) {
-      return swarmDeployments.get(color);
+   public File getTargetPath() {
+      return getSwarmConfig().getTargetPath();
    }
 
    public DeploymentColor nextDeploymentColor() {
@@ -103,10 +104,26 @@ public class DeploymentContainer {
       return blueProcessStart > greenProcessStart ? DeploymentColor.GREEN : DeploymentColor.BLUE;
    }
 
-   public File getSourcePath() { return getSwarmConfig().getSourcePath(); }
+   public DeploymentColor freeDeploymentColor() {
+      if (swarmDeployments.get(DeploymentColor.BLUE) == null) {
+         return DeploymentColor.BLUE;
+      } else if (swarmDeployments.get(DeploymentColor.GREEN) == null) {
+         return DeploymentColor.GREEN;
+      }
+      return null;
+   }
 
-   public File getTargetPath() {
-      return getSwarmConfig().getTargetPath();
+   public SwarmDeployment getDeployment(DeploymentColor color) {
+      return swarmDeployments.get(color);
+   }
+
+   public boolean removeSwarmFile(SwarmFile swarmFileToBeRemoved) {
+      boolean removed = false;
+      synchronized (FILES_QUEUE_LOCK) {
+         removed = swarmFilesQueue.remove(swarmFileToBeRemoved);
+      }
+
+      return removed;
    }
 
    public void setDeployment(DeploymentColor color, SwarmDeployment swarmDeployment) {

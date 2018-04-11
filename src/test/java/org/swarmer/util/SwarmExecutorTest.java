@@ -89,10 +89,11 @@ public class SwarmExecutorTest {
 
    @Test
    public void testCreateSwarmCliArguments() {
-      String jarPath = ".\\src\\scrapbook\\test-swarm-app\\target\\demo-swarm.jar";
-      File   jarFile = new File(jarPath);
+      String     jarPath = ".\\src\\scrapbook\\test-swarm-app\\target\\demo-swarm.jar";
+      File       jarFile = new File(jarPath);
+      final long uid     = System.currentTimeMillis();
       String[] commandLine = SwarmExecutor.createSwarmCliArguments("Blue Instance",
-                                                                   "8080", "-Djava.io.tmpdir=D:\\temp\\some_tmp",
+                                                                   "8080", "-Djava.io.tmpdir=D:\\temp\\some_tmp", uid,
                                                                    "-S appArg", jarFile);
 
       Assert.assertEquals("cmd.exe", commandLine[0]);
@@ -103,12 +104,13 @@ public class SwarmExecutorTest {
       Assert.assertEquals(".\\src\\scrapbook\\test-swarm-app\\target", commandLine[5]);
       Assert.assertEquals(FileUtil.WIN_TEE_APP_PATH, commandLine[6]);
       Assert.assertEquals("java", commandLine[7]);
-      Assert.assertEquals("-Dswarm.http.port=8080", commandLine[8]);
-      Assert.assertEquals("-Djava.io.tmpdir=D:\\temp\\some_tmp", commandLine[9]);
-      Assert.assertEquals("-jar", commandLine[10]);
-      Assert.assertEquals(jarFile.getName(), commandLine[11]);
-      Assert.assertEquals("-S", commandLine[12]);
-      Assert.assertEquals("appArg", commandLine[13]);
+      Assert.assertEquals((SwarmExecutor.UID_JVM_ARG + uid), commandLine[8]);
+      Assert.assertEquals("-Dswarm.http.port=8080", commandLine[9]);
+      Assert.assertEquals("-Djava.io.tmpdir=D:\\temp\\some_tmp", commandLine[10]);
+      Assert.assertEquals("-jar", commandLine[11]);
+      Assert.assertEquals(jarFile.getName(), commandLine[12]);
+      Assert.assertEquals("-S", commandLine[13]);
+      Assert.assertEquals("appArg", commandLine[14]);
    }
 
    @Test
@@ -121,47 +123,6 @@ public class SwarmExecutorTest {
       waitSwarmToShutDown("demo-swarm.jar", uid);
    }
 
-   private long startSwarm() {
-      final String WINDOW_NAME = "Blue Instance";
-      String       jarPath     = ".\\src\\scrapbook\\test-swarm-app\\target\\demo-swarm.jar";
-      File         jarFile     = new File(jarPath);
-      final long   uid         = System.currentTimeMillis();
-      final String jvmArgs     = "-Duid=" + uid + " -Djava.io.tmpdir=D:\\temp\\some_tmp";
-      String[] swarmArgs = SwarmExecutor.createSwarmCliArguments(WINDOW_NAME,
-                                                                 "8080", jvmArgs, "",
-                                                                 jarFile);
-      new File(FileUtil.WIN_TEE_APP_PATH).delete();
-      FileUtil.copyWinTeeAppToTmp();
-      SwarmExecutor.startSwarmInstance(swarmArgs);
-      int timeWaited = 0;
-      while (SwarmExecutor.waitFor(1000)) {
-         StringBuffer urlContents = NetUtils.getUrlContent("http://localhost:8500/v1/health/service/QnstMS");
-         if (!urlContents.toString().equalsIgnoreCase("[]")) {
-            break;
-         }
-         if (timeWaited > DEFAULT_SWARM_STARTUP_TIME) {
-            throw new RuntimeException("Swarm could not be started!");
-         }
-         timeWaited++;
-      }
-
-      return uid;
-   }
-
-   private void waitSwarmToShutDown(String swarmJar, long uid) {
-      int timeWaited = 0;
-      while (SwarmExecutor.waitFor(1000)) {
-         int     pid                 = SwarmExecutor.getSwarmPID(swarmJar, uid);
-         boolean successfuleShutdown = (pid == -1);
-         if (successfuleShutdown) {
-            break;
-         } else if (timeWaited > DEFAULT_SWARM_STARTUP_TIME) {
-            throw new RuntimeException("Swarm could not shutdown!");
-         }
-         timeWaited++;
-      }
-   }
-
    @Test
    public void testHealthStatusOfSwarm() {
       final String WINDOW_NAME = "Blue Instance";
@@ -170,7 +131,7 @@ public class SwarmExecutorTest {
       final long   uid         = System.currentTimeMillis();
       final String jvmArgs     = "-Duid=" + uid + " -Djava.io.tmpdir=D:\\temp\\some_tmp";
       String[] swarmArgs = SwarmExecutor.createSwarmCliArguments(WINDOW_NAME,
-                                                                 "8080", jvmArgs, "",
+                                                                 "8080", jvmArgs, uid, "",
                                                                  jarFile);
       Process process    = SwarmExecutor.startSwarmInstance(swarmArgs);
       int     timeWaited = 0;
@@ -188,9 +149,18 @@ public class SwarmExecutorTest {
       }
    }
 
-   @Test
-   public void testJavaProcessStatusToolExists() {
-      Assert.assertTrue("jps.exe does not exis!", SwarmExecutor.javaProcessStatusToolExists());
+   private void waitSwarmToShutDown(String swarmJar, long uid) {
+      int timeWaited = 0;
+      while (SwarmExecutor.waitFor(1000)) {
+         int     pid                 = SwarmExecutor.getSwarmPID(swarmJar, uid);
+         boolean successfuleShutdown = (pid == -1);
+         if (successfuleShutdown) {
+            break;
+         } else if (timeWaited > DEFAULT_SWARM_STARTUP_TIME) {
+            throw new RuntimeException("Swarm could not shutdown!");
+         }
+         timeWaited++;
+      }
    }
 
    @Test
@@ -198,8 +168,9 @@ public class SwarmExecutorTest {
       final String WINDOW_NAME = "Blue Instance";
       String       jarPath     = ".\\src\\scrapbook\\test-swarm-app\\target\\demo-swarm.jar";
       File         jarFile     = new File(jarPath);
+      final long   uid         = System.currentTimeMillis();
       String[] swarmArgs = SwarmExecutor.createSwarmCliArguments(WINDOW_NAME,
-                                                                 "8080", "-Djava.io.tmpdir=D:\\temp\\some_tmp", "",
+                                                                 "8080", "-Djava.io.tmpdir=D:\\temp\\some_tmp", uid, "",
                                                                  jarFile);
       Process process    = SwarmExecutor.startSwarmInstance(swarmArgs);
       int     timeWaited = 0;
@@ -214,5 +185,37 @@ public class SwarmExecutorTest {
          timeWaited++;
       }
       Assert.assertTrue(SwarmExecutor.killSwarmWindow(WINDOW_NAME));
+   }
+
+   @Test
+   public void testJavaProcessStatusToolExists() {
+      Assert.assertTrue("jps.exe does not exis!", SwarmExecutor.javaProcessStatusToolExists());
+   }
+
+   private long startSwarm() {
+      final String WINDOW_NAME = "Blue Instance";
+      String       jarPath     = ".\\src\\scrapbook\\test-swarm-app\\target\\demo-swarm.jar";
+      File         jarFile     = new File(jarPath);
+      final long   uid         = System.currentTimeMillis();
+      final String jvmArgs     = "-Duid=" + uid + " -Djava.io.tmpdir=D:\\temp\\some_tmp";
+      String[] swarmArgs = SwarmExecutor.createSwarmCliArguments(WINDOW_NAME,
+                                                                 "8080", jvmArgs, uid, "",
+                                                                 jarFile);
+      new File(FileUtil.WIN_TEE_APP_PATH).delete();
+      FileUtil.copyWinTeeAppToTmp();
+      SwarmExecutor.startSwarmInstance(swarmArgs);
+      int timeWaited = 0;
+      while (SwarmExecutor.waitFor(1000)) {
+         StringBuffer urlContents = NetUtils.getUrlContent("http://localhost:8500/v1/health/service/QnstMS");
+         if (!urlContents.toString().equalsIgnoreCase("[]")) {
+            break;
+         }
+         if (timeWaited > DEFAULT_SWARM_STARTUP_TIME) {
+            throw new RuntimeException("Swarm could not be started!");
+         }
+         timeWaited++;
+      }
+
+      return uid;
    }
 }
