@@ -20,44 +20,57 @@ public class FolderChangesWatcher {
    private static final Logger LOG = LogManager.getLogger(FolderChangesWatcher.class);
 
    private FolderChangesContext folderChangesCtx;
-   private WatchService         watchService;
+   private SwarmerContext       swarmerCtx;
 
    public FolderChangesWatcher() {
       folderChangesCtx = null;
-      watchService = null;
+      swarmerCtx = SwarmerContext.instance();
    }
 
    public void watch() throws IOException, InterruptedException {
       initializeWatcher();
-      registerFolders();
+      // registerFolders();
       try {
-         watchLoop(watchService);
+         watchLoop(swarmerCtx.getWatchService());
       } finally {
-         watchService.close();
          folderChangesCtx.reset();
       }
    }
 
-   private void initializeWatcher() throws IOException {
+   private void initializeWatcher() {
       folderChangesCtx = new FolderChangesContext();
-      watchService = createDefaultWatchService();
    }
 
-   private void registerFolders() throws IOException {
-      DeploymentContainer[] deploymentContainers = SwarmerContext.instance().getDeploymentContainers();
-      for (DeploymentContainer deploymentContainer : deploymentContainers) {
-         File srcFolder = deploymentContainer.getSourcePath();
-         if (srcFolder.exists() && srcFolder.isDirectory()) {
-            Path     srcPath = srcFolder.toPath();
-            WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
-            folderChangesCtx.addSwarmDeployment(key, deploymentContainer);
-            LOG.info("Registered folder [{}] for watch.", srcFolder);
-         } else {
-            String msg = String.format("Folder [%s] does not exist!", srcFolder.getAbsolutePath());
-            LOG.error(msg);
-            throw new IOException(msg);
+   private void processWatchEvents(WatchKey queuedKey) {
+      // If we do it in this way then we poll current events and remove them from list. Must be done in such a way
+      // because every call to this function gets fresh list from event list. Do NOT put queuedKey.pollEvents() in the
+      // for loop (e.g. for (WatchEvent<?> watchEvent : queuedKey.pollEvents()) {})
+      List<WatchEvent<?>> pollEvents = queuedKey.pollEvents();
+      LOG.info("Started polling watch events [size: {}]: {}", pollEvents.size(),
+               getWatchEventsInfo(queuedKey, pollEvents));
+      for (WatchEvent<?> watchEvent : pollEvents) {
+         Path srcPath = getFullPath(queuedKey, watchEvent);
+
+         String  srcFilename             = srcPath.toFile().getName();
+         boolean isFile                  = srcPath.toFile().isFile();
+         boolean fileMatchesPattern      = swarmerCtx.getSwarmConfig(queuedKey).matchesFilePattern(srcFilename);
+         boolean isValidFile             = isFile && fileMatchesPattern;
+         boolean isValidModifyEvent      = (watchEvent.kind() == StandardWatchEventKinds.ENTRY_MODIFY) && isValidFile;
+         boolean isFileCheckedForLocking = folderChangesCtx.hasCheckedFileForLocking(srcPath.toFile());
+
+         if (isValidModifyEvent) {
+            LOG.debug("Event... kind={}, count={}, context={} path={}", watchEvent.kind(), watchEvent.count(),
+                      watchEvent.context(),
+                      srcPath.toFile().getAbsolutePath());
+         }
+
+         if (isValidModifyEvent && !isFileCheckedForLocking) {
+            processModifyEvent(queuedKey, watchEvent);
+         } else if (isValidModifyEvent && isFileCheckedForLocking) {
+            folderChangesCtx.removeCheckedFileForLocking(srcPath.toFile());
          }
       }
+      LOG.info("Ended polling watch events [size: {}]\n", pollEvents.size());
    }
 
    private void watchLoop(WatchService watchService) throws InterruptedException {
@@ -70,7 +83,7 @@ public class FolderChangesWatcher {
 
          WatchKey queuedKey = watchService.poll(1000, TimeUnit.MILLISECONDS);
 
-         if (queuedKey == null) continue;
+         if (queuedKey == null) { continue; }
 
          try {
             processWatchEvents(queuedKey);
@@ -95,36 +108,21 @@ public class FolderChangesWatcher {
       return FileSystems.getDefault().newWatchService();
    }
 
-   private void processWatchEvents(WatchKey queuedKey) {
-      // If we do it in this way then we poll current events and remove them from list. Must be done in such a way
-      // because every call to this function gets fresh list from event list. Do NOT put queuedKey.pollEvents() in the
-      // for loop (e.g. for (WatchEvent<?> watchEvent : queuedKey.pollEvents()) {})
-      List<WatchEvent<?>> pollEvents = queuedKey.pollEvents();
-      LOG.info("Started polling watch events [size: {}]: {}", pollEvents.size(),
-               getWatchEventsInfo(queuedKey, pollEvents));
-      for (WatchEvent<?> watchEvent : pollEvents) {
-         Path srcPath = getFullPath(queuedKey, watchEvent);
-
-         String  srcFilename             = srcPath.toFile().getName();
-         boolean isFile                  = srcPath.toFile().isFile();
-         boolean fileMatchesPattern      = folderChangesCtx.getSwarmConfig(queuedKey).matchesFilePattern(srcFilename);
-         boolean isValidFile             = isFile && fileMatchesPattern;
-         boolean isValidModifyEvent      = (watchEvent.kind() == StandardWatchEventKinds.ENTRY_MODIFY) && isValidFile;
-         boolean isFileCheckedForLocking = folderChangesCtx.hasCheckedFileForLocking(srcPath.toFile());
-
-         if (isValidModifyEvent) {
-            LOG.debug("Event... kind={}, count={}, context={} path={}", watchEvent.kind(), watchEvent.count(),
-                      watchEvent.context(),
-                      srcPath.toFile().getAbsolutePath());
-         }
-
-         if (isValidModifyEvent && !isFileCheckedForLocking) {
-            processModifyEvent(queuedKey, watchEvent);
-         } else if (isValidModifyEvent && isFileCheckedForLocking) {
-            folderChangesCtx.removeCheckedFileForLocking(srcPath.toFile());
+   private void registerFolders() throws IOException {
+      DeploymentContainer[] deploymentContainers = SwarmerContext.instance().getDeploymentContainers();
+      for (DeploymentContainer deploymentContainer : deploymentContainers) {
+         File srcFolder = deploymentContainer.getSourcePath();
+         if (srcFolder.exists() && srcFolder.isDirectory()) {
+            Path     srcPath = srcFolder.toPath();
+            WatchKey key     = srcPath.register(swarmerCtx.getWatchService(), StandardWatchEventKinds.ENTRY_MODIFY);
+            folderChangesCtx.addSwarmDeployment(key, deploymentContainer);
+            LOG.info("Registered folder [{}] for watch.", srcFolder);
+         } else {
+            String msg = String.format("Folder [%s] does not exist!", srcFolder.getAbsolutePath());
+            LOG.error(msg);
+            throw new IOException(msg);
          }
       }
-      LOG.info("Ended polling watch events [size: {}]\n", pollEvents.size());
    }
 
    private String getWatchEventsInfo(WatchKey queuedKey, List<WatchEvent<?>> pollEvents) {

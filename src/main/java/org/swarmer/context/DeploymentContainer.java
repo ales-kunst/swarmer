@@ -6,6 +6,7 @@ import org.swarmer.exception.ExceptionThrower;
 import org.swarmer.exception.ValidationException;
 
 import java.io.File;
+import java.nio.file.WatchKey;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +22,7 @@ public class DeploymentContainer {
    private boolean                               deploymentInProgress;
    private Map<DeploymentColor, SwarmDeployment> swarmDeployments;
    private List<SwarmFile>                       swarmFilesQueue;
+   private WatchKey                              watchKey;
 
    public DeploymentContainer(SwarmConfig swarmConfig) {
       this.swarmConfig = swarmConfig;
@@ -61,6 +63,14 @@ public class DeploymentContainer {
 
    public SwarmConfig getSwarmConfig() {
       return swarmConfig;
+   }
+
+   public WatchKey getWatchKey() {
+      return watchKey;
+   }
+
+   public void setWatchKey(WatchKey watchKey) {
+      this.watchKey = watchKey;
    }
 
    public boolean isDeploymentInProgress() {
@@ -129,6 +139,4 @@ public class DeploymentContainer {
    public void setDeployment(DeploymentColor color, SwarmDeployment swarmDeployment) {
       swarmDeployments.put(color, swarmDeployment);
    }
-
-
 }

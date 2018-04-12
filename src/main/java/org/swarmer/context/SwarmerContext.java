@@ -5,8 +5,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.ini4j.Ini;
 
+import java.io.IOException;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 
 public class SwarmerContext {
@@ -20,6 +23,7 @@ public class SwarmerContext {
 
    protected Ini.Section               defaultSection;
    protected List<DeploymentContainer> deploymentContainers;
+   protected WatchService              watchService;
 
    public static SwarmerContext instance() {
       return ctxInstance;
@@ -40,6 +44,14 @@ public class SwarmerContext {
    private SwarmerContext(Builder builder) {
       this.deploymentContainers = builder.deploymentContainers;
       this.defaultSection = builder.defaultSection;
+      this.watchService = builder.watchService;
+   }
+
+   public boolean addDeploymentContainer(DeploymentContainer deploymentContainer) throws IOException {
+      Path     srcPath = deploymentContainer.getSourcePath().toPath();
+      WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+      deploymentContainer.setWatchKey(key);
+      return deploymentContainers.add(deploymentContainer);
    }
 
    public DeploymentContainer[] getDeploymentContainers() {
@@ -71,27 +83,49 @@ public class SwarmerContext {
       return new IntRange(defaultLowerPort, defaultUpperPort);
    }
 
+   public SwarmConfig getSwarmConfig(WatchKey watchKey) {
+      SwarmConfig resultConfig = null;
+      Optional<DeploymentContainer> result = deploymentContainers.stream().filter(
+              container -> container.getWatchKey().equals(watchKey)).findFirst();
+      if (result.isPresent()) {
+         resultConfig = result.get().getSwarmConfig();
+      }
+      return resultConfig;
+   }
+
    public int getSwarmStartupTimeout() {
       return Integer.parseInt(defaultSection.get(SETTING_SWARM_STARTUP_TIMEOUT, "300"));
    }
 
-   public static class Builder extends SwarmerContext {
+   public WatchService getWatchService() {
+      return watchService;
+   }
+
+   public static class Builder {
+
+      private Ini.Section               defaultSection;
+      private List<DeploymentContainer> deploymentContainers;
+      private WatchService              watchService;
 
       private Builder() {
-         super();
+         deploymentContainers = new ArrayList<>();
       }
 
-      public Builder addDeploymentContainer(DeploymentContainer deploymentContainer) {
-         super.deploymentContainers.add(deploymentContainer);
+      public Builder addDeploymentContainer(DeploymentContainer deploymentContainer) throws IOException {
+         Path     srcPath = deploymentContainer.getSourcePath().toPath();
+         WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+         deploymentContainer.setWatchKey(key);
+         deploymentContainers.add(deploymentContainer);
          return this;
       }
 
-      public SwarmerContext build() {
+      public SwarmerContext build() throws IOException {
+         watchService = FileSystems.getDefault().newWatchService();
          return new SwarmerContext(this);
       }
 
       public Builder setDefaultSection(Ini.Section defaultSection) {
-         super.defaultSection = defaultSection;
+         this.defaultSection = defaultSection;
          return this;
       }
 
