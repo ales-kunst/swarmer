@@ -13,8 +13,8 @@ import java.util.Optional;
 
 
 public class SwarmerContext {
+   private static final Object         DEPLOYMENT_CONTAINER_LOCK     = new Object();
    private static final Logger         LOG                           = LogManager.getLogger(SwarmerContext.class);
-   private static final String         SETTING_JAVA_PATH             = "java.path";
    private static final String         SETTING_LOCK_WAIT_TIMEOUT     = "lock.wait.timeout";
    private static final String         SETTING_SWARM_PORT_LOWER      = "swarm.port.lower";
    private static final String         SETTING_SWARM_PORT_UPPER      = "swarm.port.upper";
@@ -48,19 +48,31 @@ public class SwarmerContext {
    }
 
    public boolean addDeploymentContainer(DeploymentContainer deploymentContainer) throws IOException {
-      Path     srcPath = deploymentContainer.getSourcePath().toPath();
-      WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
-      deploymentContainer.setWatchKey(key);
-      return deploymentContainers.add(deploymentContainer);
+      boolean added = false;
+      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
+         Path     srcPath = deploymentContainer.getSourcePath().toPath();
+         WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+         deploymentContainer.setWatchKey(key);
+         String filenamePattern = deploymentContainer.getSwarmConfig().getFilenamePattern();
+         LOG.info("Added deployment container [name: {}, pattern: {}, source path: {}, target path: {}]",
+                  deploymentContainer.getName(), filenamePattern, deploymentContainer.getSourcePath(),
+                  deploymentContainer.getTargetPath());
+         added = deploymentContainers.add(deploymentContainer);
+      }
+
+      return added;
    }
 
    public boolean clearFileSuccessfullyLocked(WatchKey watchKey) {
-      boolean                       fileSuccessfullyLockedCleared = false;
-      Optional<DeploymentContainer> result                        = searchDeploymentContainer(watchKey);
-      if (result.isPresent()) {
-         fileSuccessfullyLockedCleared = true;
-         result.get().setFileSuccessfullyLocked(false);
+      boolean fileSuccessfullyLockedCleared = false;
+      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
+         Optional<DeploymentContainer> result = searchDeploymentContainer(watchKey);
+         if (result.isPresent()) {
+            fileSuccessfullyLockedCleared = true;
+            result.get().setFileSuccessfullyLocked(false);
+         }
       }
+
       return fileSuccessfullyLockedCleared;
    }
 
@@ -69,22 +81,25 @@ public class SwarmerContext {
    }
 
    public DeploymentContainer getDeploymentContainer(WatchKey watchKey) {
-      DeploymentContainer           resultContainer = null;
-      Optional<DeploymentContainer> result          = searchDeploymentContainer(watchKey);
-      if (result.isPresent()) {
-         resultContainer = result.get();
+      DeploymentContainer resultContainer = null;
+      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
+         Optional<DeploymentContainer> result = searchDeploymentContainer(watchKey);
+         if (result.isPresent()) {
+            resultContainer = result.get();
+         }
       }
+
       return resultContainer;
    }
 
    public DeploymentContainer[] getDeploymentContainers() {
-      DeploymentContainer[] resultArray = new DeploymentContainer[deploymentContainers.size()];
-      return deploymentContainers.toArray(resultArray);
-   }
+      DeploymentContainer[] resultArray = null;
+      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
+         resultArray = new DeploymentContainer[deploymentContainers.size()];
+         deploymentContainers.toArray(resultArray);
+      }
 
-   public String getJavaPath() {
-      String javaPathValue = defaultSection.get(SETTING_JAVA_PATH);
-      return javaPathValue;
+      return resultArray;
    }
 
    public int getLockWaitTimeout() {
@@ -107,11 +122,14 @@ public class SwarmerContext {
    }
 
    public SwarmConfig getSwarmConfig(WatchKey watchKey) {
-      SwarmConfig                   resultConfig = null;
-      Optional<DeploymentContainer> result       = searchDeploymentContainer(watchKey);
-      if (result.isPresent()) {
-         resultConfig = result.get().getSwarmConfig();
+      SwarmConfig resultConfig = null;
+      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
+         Optional<DeploymentContainer> result = searchDeploymentContainer(watchKey);
+         if (result.isPresent()) {
+            resultConfig = result.get().getSwarmConfig();
+         }
       }
+
       return resultConfig;
    }
 
@@ -124,21 +142,27 @@ public class SwarmerContext {
    }
 
    public boolean isFileSuccessfullyLocked(WatchKey watchKey) {
-      boolean                       fileSuccessfullyLocked = false;
-      Optional<DeploymentContainer> result                 = searchDeploymentContainer(watchKey);
-      if (result.isPresent()) {
-         fileSuccessfullyLocked = result.get().isFileSuccessfullyLocked();
+      boolean fileSuccessfullyLocked = false;
+      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
+         Optional<DeploymentContainer> result = searchDeploymentContainer(watchKey);
+         if (result.isPresent()) {
+            fileSuccessfullyLocked = result.get().isFileSuccessfullyLocked();
+         }
       }
+
       return fileSuccessfullyLocked;
    }
 
    public boolean setFileSuccessfullyLocked(WatchKey watchKey) {
-      boolean                       fileSuccessfullyLockedSet = false;
-      Optional<DeploymentContainer> result                    = searchDeploymentContainer(watchKey);
-      if (result.isPresent()) {
-         fileSuccessfullyLockedSet = true;
-         result.get().setFileSuccessfullyLocked(true);
+      boolean fileSuccessfullyLockedSet = false;
+      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
+         Optional<DeploymentContainer> result = searchDeploymentContainer(watchKey);
+         if (result.isPresent()) {
+            fileSuccessfullyLockedSet = true;
+            result.get().setFileSuccessfullyLocked(true);
+         }
       }
+
       return fileSuccessfullyLockedSet;
    }
 

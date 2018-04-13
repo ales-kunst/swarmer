@@ -81,13 +81,13 @@ public class SwarmConfig {
    }
 
    public boolean matchesFilePattern(String fileName) {
-      String  pattern = getFilenamePatternFromIni();
+      String  pattern = getFilenamePattern();
       boolean matches = fileName.matches(pattern);
       LOG.trace("Using pattern {} on filename {} [match: {}].", pattern, fileName, matches);
       return matches;
    }
 
-   private String getFilenamePatternFromIni() {
+   public String getFilenamePattern() {
       return section.get(FILE_PATTERN);
    }
 
