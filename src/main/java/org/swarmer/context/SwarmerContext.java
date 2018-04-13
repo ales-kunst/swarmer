@@ -54,6 +54,29 @@ public class SwarmerContext {
       return deploymentContainers.add(deploymentContainer);
    }
 
+   public boolean clearFileSuccessfullyLocked(WatchKey watchKey) {
+      boolean                       fileSuccessfullyLockedCleared = false;
+      Optional<DeploymentContainer> result                        = searchDeploymentContainer(watchKey);
+      if (result.isPresent()) {
+         fileSuccessfullyLockedCleared = true;
+         result.get().setFileSuccessfullyLocked(false);
+      }
+      return fileSuccessfullyLockedCleared;
+   }
+
+   private Optional<DeploymentContainer> searchDeploymentContainer(WatchKey watchKey) {
+      return deploymentContainers.stream().filter(container -> container.containsKey(watchKey)).findFirst();
+   }
+
+   public DeploymentContainer getDeploymentContainer(WatchKey watchKey) {
+      DeploymentContainer           resultContainer = null;
+      Optional<DeploymentContainer> result          = searchDeploymentContainer(watchKey);
+      if (result.isPresent()) {
+         resultContainer = result.get();
+      }
+      return resultContainer;
+   }
+
    public DeploymentContainer[] getDeploymentContainers() {
       DeploymentContainer[] resultArray = new DeploymentContainer[deploymentContainers.size()];
       return deploymentContainers.toArray(resultArray);
@@ -84,9 +107,8 @@ public class SwarmerContext {
    }
 
    public SwarmConfig getSwarmConfig(WatchKey watchKey) {
-      SwarmConfig resultConfig = null;
-      Optional<DeploymentContainer> result = deploymentContainers.stream().filter(
-              container -> container.getWatchKey().equals(watchKey)).findFirst();
+      SwarmConfig                   resultConfig = null;
+      Optional<DeploymentContainer> result       = searchDeploymentContainer(watchKey);
       if (result.isPresent()) {
          resultConfig = result.get().getSwarmConfig();
       }
@@ -101,6 +123,25 @@ public class SwarmerContext {
       return watchService;
    }
 
+   public boolean isFileSuccessfullyLocked(WatchKey watchKey) {
+      boolean                       fileSuccessfullyLocked = false;
+      Optional<DeploymentContainer> result                 = searchDeploymentContainer(watchKey);
+      if (result.isPresent()) {
+         fileSuccessfullyLocked = result.get().isFileSuccessfullyLocked();
+      }
+      return fileSuccessfullyLocked;
+   }
+
+   public boolean setFileSuccessfullyLocked(WatchKey watchKey) {
+      boolean                       fileSuccessfullyLockedSet = false;
+      Optional<DeploymentContainer> result                    = searchDeploymentContainer(watchKey);
+      if (result.isPresent()) {
+         fileSuccessfullyLockedSet = true;
+         result.get().setFileSuccessfullyLocked(true);
+      }
+      return fileSuccessfullyLockedSet;
+   }
+
    public static class Builder {
 
       private Ini.Section               defaultSection;
@@ -111,16 +152,18 @@ public class SwarmerContext {
          deploymentContainers = new ArrayList<>();
       }
 
-      public Builder addDeploymentContainer(DeploymentContainer deploymentContainer) throws IOException {
-         Path     srcPath = deploymentContainer.getSourcePath().toPath();
-         WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
-         deploymentContainer.setWatchKey(key);
+      public Builder addDeploymentContainer(DeploymentContainer deploymentContainer) {
          deploymentContainers.add(deploymentContainer);
          return this;
       }
 
       public SwarmerContext build() throws IOException {
          watchService = FileSystems.getDefault().newWatchService();
+         for (DeploymentContainer deploymentContainer : deploymentContainers) {
+            Path     srcPath = deploymentContainer.getSourcePath().toPath();
+            WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+            deploymentContainer.setWatchKey(key);
+         }
          return new SwarmerContext(this);
       }
 

@@ -20,11 +20,13 @@ public class DeploymentContainer {
    private final        SwarmConfig swarmConfig;
 
    private boolean                               deploymentInProgress;
+   private boolean                               fileSuccessfullyLocked;
    private Map<DeploymentColor, SwarmDeployment> swarmDeployments;
    private List<SwarmFile>                       swarmFilesQueue;
    private WatchKey                              watchKey;
 
    public DeploymentContainer(SwarmConfig swarmConfig) {
+      this.fileSuccessfullyLocked = false;
       this.swarmConfig = swarmConfig;
       this.swarmFilesQueue = new ArrayList<>();
       this.deploymentInProgress = false;
@@ -42,6 +44,10 @@ public class DeploymentContainer {
       }
 
       return swarmFile;
+   }
+
+   public boolean containsKey(WatchKey watchKey) {
+      return this.watchKey.equals(watchKey);
    }
 
    public SwarmFile getLastSwarmFile(SwarmFile.State fileState) {
@@ -83,6 +89,14 @@ public class DeploymentContainer {
       synchronized (DEPLOYMENT_IN_PROGRESS_LOCK) {
          this.deploymentInProgress = deploymentInProgress;
       }
+   }
+
+   public boolean isFileSuccessfullyLocked() {
+      return fileSuccessfullyLocked;
+   }
+
+   public void setFileSuccessfullyLocked(boolean fileSuccessfullyLocked) {
+      this.fileSuccessfullyLocked = fileSuccessfullyLocked;
    }
 
    public void isValid() throws ValidationException {
