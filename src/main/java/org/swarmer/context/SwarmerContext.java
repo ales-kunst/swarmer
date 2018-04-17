@@ -37,10 +37,6 @@ public class SwarmerContext {
       SwarmerContext.ctxInstance = ctxInstance;
    }
 
-   private SwarmerContext() {
-      this.deploymentContainers = new ArrayList<DeploymentContainer>();
-   }
-
    private SwarmerContext(Builder builder) {
       this.deploymentContainers = builder.deploymentContainers;
       this.defaultSection = builder.defaultSection;

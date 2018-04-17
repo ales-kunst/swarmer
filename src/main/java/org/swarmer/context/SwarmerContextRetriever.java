@@ -35,7 +35,8 @@ public class SwarmerContextRetriever {
          if (DEFAULT_SECTION_NAME.equalsIgnoreCase(section.getName())) {
             swarmerBuilder.setDefaultSection(section);
          } else {
-            DeploymentContainer deploymentContainer = new DeploymentContainer(new SwarmConfig(section));
+            SwarmConfig         swarmConfig         = new SwarmConfig.Builder(section).build();
+            DeploymentContainer deploymentContainer = new DeploymentContainer(swarmConfig);
             deploymentContainer.isValid();
             swarmerBuilder.addDeploymentContainer(deploymentContainer);
          }

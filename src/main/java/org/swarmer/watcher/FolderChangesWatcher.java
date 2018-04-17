@@ -17,7 +17,7 @@ public class FolderChangesWatcher {
 
    private static final Logger LOG = LogManager.getLogger(FolderChangesWatcher.class);
 
-   private SwarmerContext       swarmerCtx;
+   private SwarmerContext swarmerCtx;
 
    public FolderChangesWatcher() {
       swarmerCtx = SwarmerContext.instance();
@@ -25,10 +25,7 @@ public class FolderChangesWatcher {
 
    public void watch() throws InterruptedException {
       initializeWatcher();
-      try {
-         watchLoop(swarmerCtx.getWatchService());
-      } finally {
-      }
+      watchLoop(swarmerCtx.getWatchService());
    }
 
    private void initializeWatcher() {
