@@ -1,0 +1,120 @@
+[
+  {
+    "Node": {
+      "ID": "9c0bfa26-1c46-fdc2-a527-cc30258a94b9",
+      "Node": "mb-c-pnc003",
+      "Address": "127.0.0.1",
+      "Datacenter": "dc1",
+      "TaggedAddresses": {
+        "lan": "127.0.0.1",
+        "wan": "127.0.0.1"
+      },
+      "Meta": {
+        "consul-network-segment": ""
+      },
+      "CreateIndex": 5,
+      "ModifyIndex": 6
+    },
+    "Service": {
+      "ID": "QnstMS:127.0.0.1:8085",
+      "Service": "QnstMS",
+      "Tags": [
+        "http"
+      ],
+      "Address": "127.0.0.1",
+      "Port": 8085,
+      "EnableTagOverride": false,
+      "CreateIndex": 1471,
+      "ModifyIndex": 1471
+    },
+    "Checks": [
+      {
+        "Node": "mb-c-pnc003",
+        "CheckID": "serfHealth",
+        "Name": "Serf Health Status",
+        "Status": "passing",
+        "Notes": "",
+        "Output": "Agent alive and reachable",
+        "ServiceID": "",
+        "ServiceName": "",
+        "ServiceTags": [],
+        "CreateIndex": 5,
+        "ModifyIndex": 5
+      },
+      {
+        "Node": "mb-c-pnc003",
+        "CheckID": "service:QnstMS:127.0.0.1:8085",
+        "Name": "Service 'QnstMS' check",
+        "Status": "passing",
+        "Notes": "",
+        "Output": "",
+        "ServiceID": "QnstMS:127.0.0.1:8085",
+        "ServiceName": "QnstMS",
+        "ServiceTags": [
+          "http"
+        ],
+        "CreateIndex": 1471,
+        "ModifyIndex": 1480
+      }
+    ]
+  },
+  {
+    "Node": {
+      "ID": "9c0bfa26-1c46-fdc2-a527-cc30258a94b9",
+      "Node": "mb-c-pnc003",
+      "Address": "127.0.0.1",
+      "Datacenter": "dc1",
+      "TaggedAddresses": {
+        "lan": "127.0.0.1",
+        "wan": "127.0.0.1"
+      },
+      "Meta": {
+        "consul-network-segment": ""
+      },
+      "CreateIndex": 5,
+      "ModifyIndex": 6
+    },
+    "Service": {
+      "ID": "QnstMS:127.0.0.1:8086",
+      "Service": "QnstMS",
+      "Tags": [
+        "http"
+      ],
+      "Address": "127.0.0.1",
+      "Port": 8086,
+      "EnableTagOverride": false,
+      "CreateIndex": 1483,
+      "ModifyIndex": 1483
+    },
+    "Checks": [
+      {
+        "Node": "mb-c-pnc003",
+        "CheckID": "serfHealth",
+        "Name": "Serf Health Status",
+        "Status": "passing",
+        "Notes": "",
+        "Output": "Agent alive and reachable",
+        "ServiceID": "",
+        "ServiceName": "",
+        "ServiceTags": [],
+        "CreateIndex": 5,
+        "ModifyIndex": 5
+      },
+      {
+        "Node": "mb-c-pnc003",
+        "CheckID": "service:QnstMS:127.0.0.1:8086",
+        "Name": "Service 'QnstMS' check",
+        "Status": "critical",
+        "Notes": "",
+        "Output": "",
+        "ServiceID": "QnstMS:127.0.0.1:8086",
+        "ServiceName": "QnstMS",
+        "ServiceTags": [
+          "http"
+        ],
+        "CreateIndex": 1483,
+        "ModifyIndex": 1483
+      }
+    ]
+  }
+]

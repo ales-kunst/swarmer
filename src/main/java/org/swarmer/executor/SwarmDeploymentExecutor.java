@@ -5,10 +5,11 @@ import org.apache.logging.log4j.Logger;
 import org.swarmer.context.*;
 import org.swarmer.util.NetUtils;
 import org.swarmer.util.SwarmExecutor;
-import org.swarmer.util.SwarmerMessages;
 
 public class SwarmDeploymentExecutor implements Runnable {
-   private static final Logger              LOG = LogManager.getLogger(SwarmDeploymentExecutor.class);
+   public static final  String              SWARM_DEPLOYMENT_COLD_NOT_BE_STOPPED = "Old swarm deployment [WindowTitle: %s] could not be stopped! Manual intervention needed!";
+   private static final Logger              LOG                                  = LogManager.getLogger(
+           SwarmDeploymentExecutor.class);
    private final        DeploymentContainer deploymentContainer;
    private final        SwarmerContext      swarmerCtx;
 
@@ -52,8 +53,7 @@ public class SwarmDeploymentExecutor implements Runnable {
                LOG.error("Swarm could not be started! See log file [{}]", swarmDeployment.getLogFilename());
             }
          } else {
-            String errMsg = String.format(SwarmerMessages.SWARM_DEPLOYMENT_COLD_NOT_BE_STOPPED,
-                                          oldSwarmDeployment.getWindowTitle());
+            String errMsg = String.format(SWARM_DEPLOYMENT_COLD_NOT_BE_STOPPED, oldSwarmDeployment.getWindowTitle());
             LOG.error(errMsg);
          }
       } else {

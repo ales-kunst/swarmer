@@ -41,15 +41,15 @@ public class FolderChangesWatcher {
 
          WatchKey queuedKey = watchService.poll(1000, TimeUnit.MILLISECONDS);
 
-         if (queuedKey == null) { continue; }
-
-         try {
-            processWatchEvents(queuedKey);
-         } catch (Exception e) {
-            LOG.error("Exception from processWatchEvents: [{}]. Continue with watch.", e);
-         }
-         if (!queuedKey.reset()) {
-            LOG.warn("WatchKey no longer valid [{}].", queuedKey.toString());
+         if ((queuedKey != null) && queuedKey.isValid()) {
+            try {
+               processWatchEvents(queuedKey);
+            } catch (Exception e) {
+               LOG.error("Exception from processWatchEvents: [{}]. Continue with watch.", e);
+            }
+            if (!queuedKey.reset()) {
+               LOG.warn("WatchKey is closed [{}].", queuedKey.toString());
+            }
          }
       }
    }
