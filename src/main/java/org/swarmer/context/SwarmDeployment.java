@@ -7,7 +7,6 @@ import org.swarmer.util.SwarmExecutor;
 public class SwarmDeployment {
    private static final Logger    LOG = LogManager.getLogger(SwarmDeployment.class);
    private              int       port;
-   private              Process   process;
    private              long      processTimeStart;
    private              String[]  swarmCommand;
    private              SwarmFile swarmFile;
@@ -16,7 +15,6 @@ public class SwarmDeployment {
 
    public SwarmDeployment(SwarmFile swarmFile, int port) {
       this.swarmFile = swarmFile;
-      this.process = null;
       this.processTimeStart = System.currentTimeMillis();
       this.port = port;
    }
@@ -53,14 +51,6 @@ public class SwarmDeployment {
 
    public void hardKillSwarm() {
       SwarmExecutor.killSwarmWindow(windowTitle);
-   }
-
-   public void setProcess(Process process) {
-      if (this.process != null) {
-         String msg = String.format("Process already exists %s", process);
-         LOG.error(msg);
-      }
-      this.process = process;
    }
 
    public void setSwarmState(SwarmFile.State state, Exception e) {

@@ -100,7 +100,6 @@ public class SwarmDeploymentExecutor implements Runnable {
       boolean registeredSuccessful = SwarmExecutor.waitForServiceRegistration(swarmProcess, consulHealthServiceUrl,
                                                                               300, 1000);
       if (registeredSuccessful) {
-         swarmDeployment.setProcess(swarmProcess);
          swarmDeployment.setWindowTitle(windowTitle);
          swarmDeployment.setSwarmState(SwarmFile.State.SWARM_STARTED, null);
       }
