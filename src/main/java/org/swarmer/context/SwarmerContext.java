@@ -4,7 +4,7 @@ import org.apache.commons.lang.math.IntRange;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.ini4j.Ini;
-import org.swarmer.json.GlobalSettings;
+import org.swarmer.json.SwarmerCfg;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -24,7 +24,6 @@ public class SwarmerContext {
 
    protected Ini.Section               defaultSection;
    protected List<DeploymentContainer> deploymentContainers;
-   protected GlobalSettings            globalSettings;
    protected WatchService              watchService;
 
    public static SwarmerContext instance() {
@@ -168,7 +167,6 @@ public class SwarmerContext {
 
       private Ini.Section               defaultSection;
       private List<DeploymentContainer> deploymentContainers;
-      private GlobalSettings            globalSettings;
       private WatchService              watchService;
 
       private Builder() {
@@ -195,10 +193,8 @@ public class SwarmerContext {
          return this;
       }
 
-      public Builder setGlobalSettings(GlobalSettings globalSettings) {
-         this.globalSettings = globalSettings;
+      public Builder setGlobalSettings(SwarmerCfg swarmerCfg) {
          return this;
       }
-
    }
 }

@@ -6,7 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
 import org.swarmer.exception.ValidationException;
-import org.swarmer.json.GlobalSettings;
+import org.swarmer.json.SwarmerCfg;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,10 +55,10 @@ public class SwarmerContextRetriever {
          throw new IOException(errorMsg);
       }
       LOG.info("Reading configuration from {} file.", jsonPathname);
-      GlobalSettings         gs                = OBJECT_MAPPER.readerFor(GlobalSettings.class).readValue(jsonFile);
+      SwarmerCfg             cfg               = OBJECT_MAPPER.readerFor(SwarmerCfg.class).readValue(jsonFile);
       SwarmerContext.Builder swarmerCtxBuilder = SwarmerContext.newBuilder();
 
-      swarmerCtxBuilder.setGlobalSettings(gs);
+      swarmerCtxBuilder.setGlobalSettings(cfg);
 
       SwarmerContext.reset(swarmerCtxBuilder.build());
       return SwarmerContext.instance();
