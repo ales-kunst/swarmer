@@ -1,55 +1,63 @@
 package org.swarmer.watcher;
 
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.swarmer.InfiniteThreadOperation;
 import org.swarmer.context.DeploymentContainer;
-import org.swarmer.context.SwarmConfig;
 import org.swarmer.context.SwarmFile;
 import org.swarmer.context.SwarmerContext;
 import org.swarmer.util.FileUtil;
 import org.swarmer.util.SwarmExecutor;
 
-import java.nio.file.*;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class FolderChangesWatcher {
+public class FolderChangesWatcher extends InfiniteThreadOperation<SwarmerContext> {
 
-   private static final Logger LOG = LogManager.getLogger(FolderChangesWatcher.class);
+   private static final Logger  LOG = LogManager.getLogger(FolderChangesWatcher.class);
+   private              boolean folderChangesStarted;
 
-   private SwarmerContext swarmerCtx;
-
-   public FolderChangesWatcher() {
-      swarmerCtx = SwarmerContext.instance();
+   public FolderChangesWatcher(SwarmerContext context) {
+      super(context);
    }
 
-   public void watch() throws InterruptedException {
-      initializeWatcher();
-      watchLoop(swarmerCtx.getWatchService());
+   @Override
+   protected String threadName() {
+      return "Folder Watcher Thread";
    }
 
-   private void initializeWatcher() {
+   @Override
+   protected void operationInitialize() {
+      folderChangesStarted = false;
    }
 
-   private void watchLoop(WatchService watchService) throws InterruptedException {
-      boolean folderChangesStarted = false;
-      while (true) {
-         if (!folderChangesStarted) {
-            LOG.info("Folder changes watcher started.");
-            folderChangesStarted = true;
+   @Override
+   protected boolean shouldStop() {
+      return false;
+   }
+
+   @Override
+   protected void loopBlock() throws Exception {
+      if (!folderChangesStarted) {
+         LOG.info("Folder changes watcher started.");
+         folderChangesStarted = true;
+      }
+
+      WatchKey queuedKey = getContext().getWatchService().poll(1000, TimeUnit.MILLISECONDS);
+
+      if ((queuedKey != null) && queuedKey.isValid()) {
+         try {
+            processWatchEvents(queuedKey);
+         } catch (Exception e) {
+            LOG.error("Exception from processWatchEvents: [{}]. Continue with watch.", e.getMessage());
          }
-
-         WatchKey queuedKey = watchService.poll(1000, TimeUnit.MILLISECONDS);
-
-         if ((queuedKey != null) && queuedKey.isValid()) {
-            try {
-               processWatchEvents(queuedKey);
-            } catch (Exception e) {
-               LOG.error("Exception from processWatchEvents: [{}]. Continue with watch.", e);
-            }
-            if (!queuedKey.reset()) {
-               LOG.warn("WatchKey is closed [{}].", queuedKey.toString());
-            }
+         if (!queuedKey.reset()) {
+            LOG.warn("WatchKey is closed [{}].", queuedKey.toString());
          }
       }
    }
@@ -66,10 +74,11 @@ public class FolderChangesWatcher {
 
          String  srcFilename             = srcPath.toFile().getName();
          boolean isFile                  = srcPath.toFile().isFile();
-         boolean fileMatchesPattern      = swarmerCtx.getSwarmConfig(queuedKey).matchesFilePattern(srcFilename);
+         String  filePattern             = getContext().getFilePattern(queuedKey);
+         boolean fileMatchesPattern      = FileUtil.matchesFilePattern(srcFilename, filePattern);
          boolean isValidFile             = isFile && fileMatchesPattern;
          boolean isValidModifyEvent      = (watchEvent.kind() == StandardWatchEventKinds.ENTRY_MODIFY) && isValidFile;
-         boolean isFileCheckedForLocking = swarmerCtx.isFileSuccessfullyLocked(queuedKey);
+         boolean isFileCheckedForLocking = getContext().isFileSuccessfullyLocked(queuedKey);
 
          if (isValidModifyEvent) {
             LOG.debug("Event... kind={}, count={}, context={} path={}", watchEvent.kind(), watchEvent.count(),
@@ -80,7 +89,7 @@ public class FolderChangesWatcher {
          if (isValidModifyEvent && !isFileCheckedForLocking) {
             processModifyEvent(queuedKey, watchEvent);
          } else if (isValidModifyEvent && isFileCheckedForLocking) {
-            swarmerCtx.clearFileSuccessfullyLocked(queuedKey);
+            getContext().clearFileSuccessfullyLocked(queuedKey);
          }
       }
       LOG.info("Ended polling watch events [size: {}]\n", pollEvents.size());
@@ -124,13 +133,13 @@ public class FolderChangesWatcher {
          LOG.warn("File not copied because source file can not be locked.");
       } else if (destFileExists) {
          // We have to add that the lock has happened for next two events should be ignored
-         swarmerCtx.setFileSuccessfullyLocked(queuedKey);
+         getContext().setFileSuccessfullyLocked(queuedKey);
          LOG.error("Destination file [{}] is locked by another process.", destPath);
       } else if (fileAccessConditionsOk) {
-         swarmerCtx.setFileSuccessfullyLocked(queuedKey);
+         getContext().setFileSuccessfullyLocked(queuedKey);
          LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
                   srcPath.toFile().length());
-         DeploymentContainer deploymentContainer = swarmerCtx.getDeploymentContainer(queuedKey);
+         DeploymentContainer deploymentContainer = getContext().getDeploymentContainer(queuedKey);
          long                fileSize            = srcPath.toFile().length();
          SwarmFile swarmFile = deploymentContainer.addSwarmFile(destPath.toFile(),
                                                                 SwarmFile.State.COPYING, fileSize);
@@ -148,9 +157,17 @@ public class FolderChangesWatcher {
       // this is not a complete path
       Path file = (Path) watchEvent.context();
       // need to get parent path
-      SwarmConfig swarmConfig = swarmerCtx.getSwarmConfig(queuedKey);
-      Path        parentPath  = swarmConfig.getTargetPath().toPath();
+      Path parentPath = getContext().getDestFolder(queuedKey).toPath();
 
       return parentPath.resolve(file);
    }
+
+   @Override
+   protected void handleError(Exception exception) {
+      LOG.error("Exception from processWatchEvents. Continue with watch. Error stacktrace: \n {}",
+                ExceptionUtils.getStackTrace(exception));
+   }
+
+   @Override
+   protected void operationFinalize() {}
 }

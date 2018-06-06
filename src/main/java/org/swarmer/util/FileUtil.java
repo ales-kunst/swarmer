@@ -140,14 +140,20 @@ public class FileUtil {
       return success;
    }
 
-   public static boolean windowsKillAppExists() {
-      File windowsKillFile = new File(KILL_APP_PATH);
-      return windowsKillFile.exists();
-   }
-
    public static boolean winTeeAppExists() {
       File winTeeFile = new File(WIN_TEE_APP_PATH);
       return winTeeFile.exists();
+   }
+
+   public static boolean matchesFilePattern(String fileName, String pattern) {
+      boolean matches = fileName.matches(pattern);
+      LOG.trace("Using pattern {} on filename {} [match: {}].", pattern, fileName, matches);
+      return matches;
+   }
+
+   public static boolean windowsKillAppExists() {
+      File windowsKillFile = new File(KILL_APP_PATH);
+      return windowsKillFile.exists();
    }
 
    public static class CopyProgress {

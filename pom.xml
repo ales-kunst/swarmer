@@ -104,13 +104,6 @@
             <version>2.6</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.ini4j/ini4j -->
-        <dependency>
-            <groupId>org.ini4j</groupId>
-            <artifactId>ini4j</artifactId>
-            <version>0.5.4</version>
-        </dependency>
-
         <!-- https://mvnrepository.com/artifact/org.json/json -->
         <dependency>
             <groupId>org.json</groupId>

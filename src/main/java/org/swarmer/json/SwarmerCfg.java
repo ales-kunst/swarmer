@@ -1,6 +1,7 @@
 package org.swarmer.json;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -10,58 +11,42 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SwarmerCfg {
 
-   private final List<DeploymentContainerCfg> deploymentContainerCfgs;
+   private final List<DeploymentContainerCfg> deploymentContainerCfgList;
    private final GeneralData                  generalData;
 
    @JsonCreator
    public SwarmerCfg(@JsonProperty("general_data") GeneralData generalData,
-                     @JsonProperty("deployment_container_list") List<DeploymentContainerCfg> deploymentContainerCfgs) {
+                     @JsonProperty(
+                             "deployment_container_list") List<DeploymentContainerCfg> deploymentContainerCfgList) {
       this.generalData = generalData;
-      this.deploymentContainerCfgs = deploymentContainerCfgs != null ? deploymentContainerCfgs : new ArrayList<>();
+      this.deploymentContainerCfgList =
+              deploymentContainerCfgList != null ? deploymentContainerCfgList : new ArrayList<>();
    }
 
    public int deploymentContainerCfgsSize() {
-      return deploymentContainerCfgs.size();
+      return deploymentContainerCfgList.size();
    }
 
    public DeploymentContainerCfg getDeploymentContainerCfg(int index) {
-      return index < deploymentContainerCfgs.size() ? deploymentContainerCfgs.get(index) : null;
+      return index < deploymentContainerCfgList.size() ? deploymentContainerCfgList.get(index) : null;
    }
 
-   public String getJavaPath() {
-      return generalData.javaPath;
-   }
-
-   public Integer getLockWaitTimeout() {
-      return generalData.lockWaitTimeout;
-   }
-
-   public String getServerAddress() {
-      return generalData.serverAddress;
-   }
-
-   public Integer getServerPort() {
-      return generalData.serverPort;
-   }
-
-   public Integer getSwarmDefaultStartupTime() {
-      return generalData.swarmDefaultStartupTime;
-   }
-
-   public Integer getSwarmPortLower() {
-      return generalData.swarmPortLower;
-   }
-
-   public Integer getSwarmPortUpper() {
-      return generalData.swarmPortUpper;
+   @JsonGetter("general_data")
+   public GeneralData getGeneralData() {
+      return generalData;
    }
 
    @Override
    public String toString() {
       return "SwarmerCfg{" +
-             "deploymentContainerCfgs=" + deploymentContainerCfgs +
+             "deploymentContainerCfgList=" + deploymentContainerCfgList +
              ", generalData=" + generalData +
              '}';
+   }
+
+   @JsonGetter("deployment_container_list")
+   protected List<DeploymentContainerCfg> getDeploymentContainerCfgList() {
+      return deploymentContainerCfgList;
    }
 
    @JsonIgnoreProperties(ignoreUnknown = true)
@@ -90,6 +75,41 @@ public class SwarmerCfg {
          this.swarmDefaultStartupTime = swarmDefaultStartupTime;
          this.swarmPortLower = swarmPortLower;
          this.swarmPortUpper = swarmPortUpper;
+      }
+
+      @JsonGetter("java_path")
+      public String getJavaPath() {
+         return javaPath;
+      }
+
+      @JsonGetter("lock_wait_timeout")
+      public Integer getLockWaitTimeout() {
+         return lockWaitTimeout;
+      }
+
+      @JsonGetter("server_address")
+      public String getServerAddress() {
+         return serverAddress;
+      }
+
+      @JsonGetter("server_port")
+      public Integer getServerPort() {
+         return serverPort;
+      }
+
+      @JsonGetter("swarm_default_startup_time")
+      public Integer getSwarmDefaultStartupTime() {
+         return swarmDefaultStartupTime;
+      }
+
+      @JsonGetter("swarm_port_lower")
+      public Integer getSwarmPortLower() {
+         return swarmPortLower;
+      }
+
+      @JsonGetter("swarm_port_upper")
+      public Integer getSwarmPortUpper() {
+         return swarmPortUpper;
       }
 
       @Override

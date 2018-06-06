@@ -9,47 +9,17 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class NetUtils {
    public static final  int    MAX_PORT_NUMBER       = 65535;
    public static final  int    MIN_PORT_NUMBER       = 1100;
-   private static final int    ACCEPT_TIMEOUT_MILLIS = 10 * 1000;
+   private static final String IP_VALIDATION_PATTERN = "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}";
    private static final Logger LOG                   = LogManager.getLogger(NetUtils.class);
-
-   public static StringBuffer getUrlContent(String urlAddress) {
-      return getUrlContent(urlAddress, true);
-   }
-
-   public static StringBuffer getUrlContent(String urlAddress, boolean shouldLog) {
-      URL            url           = null;
-      StringBuffer   resultContent = null;
-      BufferedReader contentReader = null;
-      try {
-         // get Url connection
-         url = new URL(urlAddress);
-         URLConnection conn = url.openConnection();
-
-         // open the stream and put it into BufferedReader
-         contentReader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-         String inputLine;
-         resultContent = new StringBuffer();
-
-         // Get Url content
-         while ((inputLine = contentReader.readLine()) != null) {
-            resultContent.append(inputLine);
-         }
-
-         CloseableUtil.close(contentReader);
-
-      } catch (IOException e) {
-         CloseableUtil.close(contentReader);
-         resultContent = null;
-         if (shouldLog) {
-            LOG.error("Error executing getUrlContent: {}", e);
-         }
-      }
-      return resultContent;
-   }
 
    public static int getFirstAvailablePort(IntRange range) {
       int freePort = -1;
@@ -89,5 +59,63 @@ public class NetUtils {
       }
 
       return false;
+   }
+
+   public static List<InetAddress> getLocalIpAddress() {
+      List<InetAddress> ipAddresses = new ArrayList<>();
+      final Pattern     pattern     = Pattern.compile(IP_VALIDATION_PATTERN, Pattern.MULTILINE);
+
+      try {
+         Enumeration netInterfaces = NetworkInterface.getNetworkInterfaces();
+         while (netInterfaces.hasMoreElements()) {
+            NetworkInterface netInterface  = (NetworkInterface) netInterfaces.nextElement();
+            Enumeration      inetAddresses = netInterface.getInetAddresses();
+            while (inetAddresses.hasMoreElements()) {
+               InetAddress   inetAddress = (InetAddress) inetAddresses.nextElement();
+               final Matcher matcher     = pattern.matcher(inetAddress.getHostAddress());
+               if (matcher.matches()) {
+                  ipAddresses.add(inetAddress);
+               }
+            }
+         }
+      } catch (SocketException e1) {
+      }
+
+      return ipAddresses;
+   }
+
+   public static StringBuffer getUrlContent(String urlAddress) {
+      return getUrlContent(urlAddress, true);
+   }
+
+   public static StringBuffer getUrlContent(String urlAddress, boolean shouldLog) {
+      URL            url           = null;
+      StringBuffer   resultContent = null;
+      BufferedReader contentReader = null;
+      try {
+         // get Url connection
+         url = new URL(urlAddress);
+         URLConnection conn = url.openConnection();
+
+         // open the stream and put it into BufferedReader
+         contentReader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+         String inputLine;
+         resultContent = new StringBuffer();
+
+         // Get Url content
+         while ((inputLine = contentReader.readLine()) != null) {
+            resultContent.append(inputLine);
+         }
+
+         CloseableUtil.close(contentReader);
+
+      } catch (IOException e) {
+         CloseableUtil.close(contentReader);
+         resultContent = null;
+         if (shouldLog) {
+            LOG.error("Error executing getUrlContent: {}", e);
+         }
+      }
+      return resultContent;
    }
 }

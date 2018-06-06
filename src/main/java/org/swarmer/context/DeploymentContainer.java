@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.swarmer.exception.ExceptionThrower;
 import org.swarmer.exception.ValidationException;
+import org.swarmer.json.DeploymentContainerCfg;
 
 import java.io.File;
 import java.nio.file.WatchKey;
@@ -14,10 +15,11 @@ import java.util.Map;
 
 public class DeploymentContainer {
 
-   private static final Logger      LOG                         = LogManager.getLogger(DeploymentContainer.class);
-   private final        Object      DEPLOYMENT_IN_PROGRESS_LOCK = new Object();
-   private final        Object      FILES_QUEUE_LOCK            = new Object();
-   private final        SwarmConfig swarmConfig;
+   private static final Logger                 LOG                         = LogManager.getLogger(
+           DeploymentContainer.class);
+   private final        Object                 DEPLOYMENT_IN_PROGRESS_LOCK = new Object();
+   private final        Object                 FILES_QUEUE_LOCK            = new Object();
+   private final        DeploymentContainerCfg deploymentContainerCfg;
 
    private boolean                               deploymentInProgress;
    private boolean                               fileSuccessfullyLocked;
@@ -25,15 +27,15 @@ public class DeploymentContainer {
    private List<SwarmFile>                       swarmFilesQueue;
    private WatchKey                              watchKey;
 
-   public DeploymentContainer(SwarmConfig swarmConfig) {
+   public DeploymentContainer(DeploymentContainerCfg deploymentContainerCfg) {
       this.fileSuccessfullyLocked = false;
-      this.swarmConfig = swarmConfig;
       this.swarmFilesQueue = new ArrayList<>();
       this.deploymentInProgress = false;
       this.swarmDeployments = new HashMap<DeploymentColor, SwarmDeployment>() {{
          put(DeploymentColor.BLUE, null);
          put(DeploymentColor.GREEN, null);
       }};
+      this.deploymentContainerCfg = deploymentContainerCfg;
    }
 
    public SwarmFile addSwarmFile(File file, SwarmFile.State fileState, long fileSize) {
@@ -50,7 +52,7 @@ public class DeploymentContainer {
       return this.watchKey.equals(watchKey);
    }
 
-   public SwarmFile getLastSwarmFile(SwarmFile.State fileState) {
+   public SwarmFile findFirstSwarmFileWithState(SwarmFile.State fileState) {
       SwarmFile resultSwarmFile = null;
       synchronized (FILES_QUEUE_LOCK) {
          for (SwarmFile swarmFile : swarmFilesQueue) {
@@ -63,16 +65,28 @@ public class DeploymentContainer {
       return resultSwarmFile;
    }
 
+   public String getConsulHealthServiceUrl() {
+      return deploymentContainerCfg.getConsulServiceHealthUrl();
+   }
+
+   public File getDestFolder() {
+      return deploymentContainerCfg.getDestFolder();
+   }
+
+   public String getFilePattern() {
+      return deploymentContainerCfg.getFilePattern();
+   }
+
+   public String getFilenamePattern() {
+      return deploymentContainerCfg.getFilePattern();
+   }
+
+   public String getJvmParams() {
+      return deploymentContainerCfg.getJvmParams();
+   }
+
    public String getName() {
-      return getSwarmConfig().getName();
-   }
-
-   public SwarmConfig getSwarmConfig() {
-      return swarmConfig;
-   }
-
-   public WatchKey getWatchKey() {
-      return watchKey;
+      return deploymentContainerCfg.getName();
    }
 
    public void setWatchKey(WatchKey watchKey) {
@@ -111,11 +125,9 @@ public class DeploymentContainer {
       }
    }
 
-   public File getSourcePath() { return getSwarmConfig().getSourcePath(); }
+   public File getSourcePath() { return deploymentContainerCfg.getSrcFolder(); }
 
-   public File getTargetPath() {
-      return getSwarmConfig().getTargetPath();
-   }
+   public File getTargetPath() { return deploymentContainerCfg.getDestFolder(); }
 
    public DeploymentColor nextDeploymentColor() {
       DeploymentColor freeDeploymentColor = freeDeploymentColor();
@@ -142,7 +154,7 @@ public class DeploymentContainer {
    }
 
    public boolean removeSwarmFile(SwarmFile swarmFileToBeRemoved) {
-      boolean removed = false;
+      boolean removed;
       synchronized (FILES_QUEUE_LOCK) {
          removed = swarmFilesQueue.remove(swarmFileToBeRemoved);
       }

@@ -7,6 +7,11 @@ public class SwarmerInputParams {
                                 "D:\\programming\\java\\swarmer\\src\\test\\resources\\swarmer.ini");
    }
 
+   public static String jsonFilePath() {
+      return System.getProperty("swarm.starter.configuration.filepath",
+                                "D:\\programming\\java\\swarmer\\src\\test\\resources\\swarmer_config.json");
+   }
+
    private SwarmerInputParams() {
    }
 }

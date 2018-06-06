@@ -1,8 +1,11 @@
 package org.swarmer.json;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,11 +13,11 @@ import java.util.List;
 public class DeploymentContainerCfg {
    private final String                   consulServiceHealthUrl;
    private final String                   consulUrl;
-   private final String                   destFolder;
+   private final File                     destFolder;
    private final String                   filePattern;
    private final String                   jvmParams;
    private final String                   name;
-   private final String                   srcFolder;
+   private final File                     srcFolder;
    private final List<SwarmDeploymentCfg> swarmDeploymentCfgs;
 
    public DeploymentContainerCfg(@JsonProperty("name") String name,
@@ -27,40 +30,57 @@ public class DeploymentContainerCfg {
                                  @JsonProperty("swarm_deployment_list") List<SwarmDeploymentCfg> swarmDeploymentCfgs) {
       this.consulServiceHealthUrl = consulServiceHealthUrl;
       this.consulUrl = consulUrl;
-      this.destFolder = destFolder;
+      this.destFolder = new File(destFolder);
       this.filePattern = filePattern;
       this.jvmParams = jvmParams;
       this.name = name;
-      this.srcFolder = srcFolder;
+      this.srcFolder = new File(srcFolder);
       this.swarmDeploymentCfgs = swarmDeploymentCfgs != null ? swarmDeploymentCfgs : new ArrayList<>();
    }
 
+   @JsonGetter("consul_service_health_url")
    public String getConsulServiceHealthUrl() {
       return consulServiceHealthUrl;
    }
 
+   @JsonGetter("consul_url")
    public String getConsulUrl() {
       return consulUrl;
    }
 
-   public String getDestFolder() {
+   @JsonIgnore
+   public File getDestFolder() {
       return destFolder;
    }
 
+   @JsonGetter("dest_folder")
+   public String getDestFolderPath() {
+      return destFolder.getAbsolutePath();
+   }
+
+   @JsonGetter("file_pattern")
    public String getFilePattern() {
       return filePattern;
    }
 
+   @JsonGetter("jvm_params")
    public String getJvmParams() {
       return jvmParams;
    }
 
+   @JsonGetter("name")
    public String getName() {
       return name;
    }
 
-   public String getSrcFolder() {
+   @JsonIgnore
+   public File getSrcFolder() {
       return srcFolder;
+   }
+
+   @JsonGetter("src_folder")
+   public String getSrcFolderPath() {
+      return srcFolder.getAbsolutePath();
    }
 
    public SwarmDeploymentCfg getSwarmDeploymentCfg(int index) {
@@ -83,5 +103,10 @@ public class DeploymentContainerCfg {
              ", srcFolder='" + srcFolder + '\'' +
              ", swarmDeploymentCfgs=" + swarmDeploymentCfgs +
              '}';
+   }
+
+   @JsonGetter("swarm_deployment_list")
+   protected List<SwarmDeploymentCfg> swarmDeploymentCfgList() {
+      return swarmDeploymentCfgs;
    }
 }

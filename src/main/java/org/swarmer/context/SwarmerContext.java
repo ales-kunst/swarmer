@@ -3,9 +3,11 @@ package org.swarmer.context;
 import org.apache.commons.lang.math.IntRange;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.ini4j.Ini;
+import org.swarmer.exception.ValidationException;
+import org.swarmer.json.DeploymentContainerCfg;
 import org.swarmer.json.SwarmerCfg;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.ArrayList;
@@ -16,15 +18,11 @@ import java.util.Optional;
 public class SwarmerContext {
    private static final Object         DEPLOYMENT_CONTAINER_LOCK     = new Object();
    private static final Logger         LOG                           = LogManager.getLogger(SwarmerContext.class);
-   private static final String         SETTING_LOCK_WAIT_TIMEOUT     = "lock.wait.timeout";
-   private static final String         SETTING_SWARM_PORT_LOWER      = "swarm.port.lower";
-   private static final String         SETTING_SWARM_PORT_UPPER      = "swarm.port.upper";
-   private static final String         SETTING_SWARM_STARTUP_TIMEOUT = "swarm.default.startup.time";
    private static       SwarmerContext ctxInstance                   = null;
 
-   protected Ini.Section               defaultSection;
    protected List<DeploymentContainer> deploymentContainers;
    protected WatchService              watchService;
+   private   SwarmerCfg.GeneralData    swarmerCfgGeneralData;
 
    public static SwarmerContext instance() {
       return ctxInstance;
@@ -34,13 +32,17 @@ public class SwarmerContext {
       return new Builder();
    }
 
+   static Builder newBuilder(SwarmerCfg swarmerCfg) {
+      return new Builder(swarmerCfg);
+   }
+
    static void reset(SwarmerContext ctxInstance) {
       SwarmerContext.ctxInstance = ctxInstance;
    }
 
    private SwarmerContext(Builder builder) {
       this.deploymentContainers = builder.deploymentContainers;
-      this.defaultSection = builder.defaultSection;
+      this.swarmerCfgGeneralData = builder.swarmerCfg.getGeneralData();
       this.watchService = builder.watchService;
    }
 
@@ -50,7 +52,7 @@ public class SwarmerContext {
          Path     srcPath = deploymentContainer.getSourcePath().toPath();
          WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
          deploymentContainer.setWatchKey(key);
-         String filenamePattern = deploymentContainer.getSwarmConfig().getFilenamePattern();
+         String filenamePattern = deploymentContainer.getFilenamePattern();
          LOG.info("Added deployment container [name: {}, pattern: {}, source path: {}, target path: {}]",
                   deploymentContainer.getName(), filenamePattern, deploymentContainer.getSourcePath(),
                   deploymentContainer.getTargetPath());
@@ -99,25 +101,29 @@ public class SwarmerContext {
       return resultArray;
    }
 
-   public int getLockWaitTimeout() {
-      int    lockWaitTimeout      = 3000;
-      String lockWaitTimeoutValue = defaultSection.get(SETTING_LOCK_WAIT_TIMEOUT);
-      if (lockWaitTimeoutValue != null) {
-         lockWaitTimeout = Integer.valueOf(lockWaitTimeoutValue);
+   public File getDestFolder(WatchKey watchKey) {
+      File destFolder = null;
+      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
+         Optional<DeploymentContainer> result = searchDeploymentContainer(watchKey);
+         if (result.isPresent()) {
+            destFolder = result.get().getDestFolder();
+         }
       }
-
-      return lockWaitTimeout;
+      return destFolder;
    }
 
-   public IntRange getPortRange() {
-      int defaultLowerPort = 8000;
-      int defaultUpperPort = 10000;
-
-      defaultLowerPort = Integer.parseInt(defaultSection.get(SETTING_SWARM_PORT_LOWER, "8000"));
-      defaultUpperPort = Integer.parseInt(defaultSection.get(SETTING_SWARM_PORT_UPPER, "10000"));
-      return new IntRange(defaultLowerPort, defaultUpperPort);
+   public String getFilePattern(WatchKey watchKey) {
+      String filePattern = null;
+      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
+         Optional<DeploymentContainer> result = searchDeploymentContainer(watchKey);
+         if (result.isPresent()) {
+            filePattern = result.get().getFilePattern();
+         }
+      }
+      return filePattern;
    }
 
+   /*
    public SwarmConfig getSwarmConfig(WatchKey watchKey) {
       SwarmConfig resultConfig = null;
       synchronized (DEPLOYMENT_CONTAINER_LOCK) {
@@ -129,9 +135,30 @@ public class SwarmerContext {
 
       return resultConfig;
    }
+   */
+
+   public int getLockWaitTimeout() {
+      int     lockWaitTimeout      = 3000;
+      Integer lockWaitTimeoutValue = swarmerCfgGeneralData.getLockWaitTimeout();
+      if (lockWaitTimeoutValue != null) {
+         lockWaitTimeout = lockWaitTimeoutValue.intValue();
+      }
+
+      return lockWaitTimeout;
+   }
+
+   public IntRange getPortRange() {
+      int defaultLowerPort =
+              swarmerCfgGeneralData.getSwarmPortLower() != null ? swarmerCfgGeneralData.getSwarmPortLower() : 8000;
+      int defaultUpperPort =
+              swarmerCfgGeneralData.getSwarmPortUpper() != null ? swarmerCfgGeneralData.getSwarmPortUpper() : 10000;
+
+      return new IntRange(defaultLowerPort, defaultUpperPort);
+   }
 
    public int getSwarmStartupTimeout() {
-      return Integer.parseInt(defaultSection.get(SETTING_SWARM_STARTUP_TIMEOUT, "300"));
+      return swarmerCfgGeneralData.getSwarmDefaultStartupTime() != null ? swarmerCfgGeneralData
+              .getSwarmDefaultStartupTime() : 300;
    }
 
    public WatchService getWatchService() {
@@ -164,18 +191,17 @@ public class SwarmerContext {
    }
 
    public static class Builder {
-
-      private Ini.Section               defaultSection;
       private List<DeploymentContainer> deploymentContainers;
+      private SwarmerCfg                swarmerCfg;
       private WatchService              watchService;
+
+      private Builder(SwarmerCfg swarmerCfg) {
+         this();
+         this.swarmerCfg = swarmerCfg;
+      }
 
       private Builder() {
          deploymentContainers = new ArrayList<>();
-      }
-
-      public Builder addDeploymentContainer(DeploymentContainer deploymentContainer) {
-         deploymentContainers.add(deploymentContainer);
-         return this;
       }
 
       public SwarmerContext build() throws IOException {
@@ -188,12 +214,24 @@ public class SwarmerContext {
          return new SwarmerContext(this);
       }
 
-      public Builder setDefaultSection(Ini.Section defaultSection) {
-         this.defaultSection = defaultSection;
-         return this;
+      public SwarmerContext buildFromCfg() throws IOException, ValidationException {
+         watchService = FileSystems.getDefault().newWatchService();
+         int elem_num = swarmerCfg.deploymentContainerCfgsSize();
+         for (int index = 0; index < elem_num; index++) {
+            DeploymentContainerCfg deploymentContainerCfg = swarmerCfg.getDeploymentContainerCfg(index);
+            DeploymentContainer    deploymentContainer    = new DeploymentContainer(deploymentContainerCfg);
+            deploymentContainer.isValid();
+            Path     srcPath = deploymentContainer.getSourcePath().toPath();
+            WatchKey key     = srcPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+            deploymentContainer.setWatchKey(key);
+            addDeploymentContainer(deploymentContainer);
+         }
+
+         return new SwarmerContext(this);
       }
 
-      public Builder setGlobalSettings(SwarmerCfg swarmerCfg) {
+      public Builder addDeploymentContainer(DeploymentContainer deploymentContainer) {
+         deploymentContainers.add(deploymentContainer);
          return this;
       }
    }
