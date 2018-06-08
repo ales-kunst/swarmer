@@ -10,7 +10,7 @@ public class NetUtilsTest {
 
    @Test
    public void getLocalIpAddress() {
-      List<InetAddress> ipAddresses = NetUtils.getLocalIpAddress();
+      List<InetAddress> ipAddresses = NetUtils.getLocalIpAddresses();
       Assert.assertTrue(ipAddresses.size() >= 1);
    }
 }

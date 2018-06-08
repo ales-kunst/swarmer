@@ -11,7 +11,7 @@ import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DeploymentContainerCfg {
-   private final String                   consulServiceHealthUrl;
+   private final String                   consulServiceName;
    private final String                   consulUrl;
    private final File                     destFolder;
    private final String                   filePattern;
@@ -26,9 +26,9 @@ public class DeploymentContainerCfg {
                                  @JsonProperty("file_pattern") String filePattern,
                                  @JsonProperty("jvm_params") String jvmParams,
                                  @JsonProperty("consul_url") String consulUrl,
-                                 @JsonProperty("consul_service_health_url") String consulServiceHealthUrl,
+                                 @JsonProperty("consul_service_name") String consulServiceName,
                                  @JsonProperty("swarm_deployment_list") List<SwarmDeploymentCfg> swarmDeploymentCfgs) {
-      this.consulServiceHealthUrl = consulServiceHealthUrl;
+      this.consulServiceName = consulServiceName;
       this.consulUrl = consulUrl;
       this.destFolder = new File(destFolder);
       this.filePattern = filePattern;
@@ -38,9 +38,9 @@ public class DeploymentContainerCfg {
       this.swarmDeploymentCfgs = swarmDeploymentCfgs != null ? swarmDeploymentCfgs : new ArrayList<>();
    }
 
-   @JsonGetter("consul_service_health_url")
-   public String getConsulServiceHealthUrl() {
-      return consulServiceHealthUrl;
+   @JsonGetter("consul_service_name")
+   public String getConsulServiceName() {
+      return consulServiceName;
    }
 
    @JsonGetter("consul_url")
@@ -94,7 +94,7 @@ public class DeploymentContainerCfg {
    @Override
    public String toString() {
       return "DeploymentContainerCfg{" +
-             "consulServiceHealthUrl='" + consulServiceHealthUrl + '\'' +
+             "consulServiceName='" + consulServiceName + '\'' +
              ", consulUrl='" + consulUrl + '\'' +
              ", destFolder='" + destFolder + '\'' +
              ", filePattern='" + filePattern + '\'' +

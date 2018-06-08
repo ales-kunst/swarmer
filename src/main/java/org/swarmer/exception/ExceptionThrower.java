@@ -6,6 +6,10 @@ public class ExceptionThrower {
       throw new RuntimeException(e);
    }
 
+   public static void throwRuntimeError(String text) {
+      throw new RuntimeException(text);
+   }
+
    public static void throwSwarmerCtxException(String msg) throws SwarmerContextException {
       throw new SwarmerContextException(msg);
    }

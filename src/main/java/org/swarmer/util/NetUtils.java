@@ -61,7 +61,7 @@ public class NetUtils {
       return false;
    }
 
-   public static List<InetAddress> getLocalIpAddress() {
+   public static List<InetAddress> getLocalIpAddresses() {
       List<InetAddress> ipAddresses = new ArrayList<>();
       final Pattern     pattern     = Pattern.compile(IP_VALIDATION_PATTERN, Pattern.MULTILINE);
 
@@ -84,13 +84,9 @@ public class NetUtils {
       return ipAddresses;
    }
 
-   public static StringBuffer getUrlContent(String urlAddress) {
-      return getUrlContent(urlAddress, true);
-   }
-
-   public static StringBuffer getUrlContent(String urlAddress, boolean shouldLog) {
-      URL            url           = null;
-      StringBuffer   resultContent = null;
+   public static StringBuffer getUrlContent(String urlAddress) throws IOException {
+      URL            url;
+      StringBuffer   resultContent;
       BufferedReader contentReader = null;
       try {
          // get Url connection
@@ -107,14 +103,8 @@ public class NetUtils {
             resultContent.append(inputLine);
          }
 
+      } finally {
          CloseableUtil.close(contentReader);
-
-      } catch (IOException e) {
-         CloseableUtil.close(contentReader);
-         resultContent = null;
-         if (shouldLog) {
-            LOG.error("Error executing getUrlContent: {}", e);
-         }
       }
       return resultContent;
    }

@@ -48,8 +48,38 @@ public class DeploymentContainer {
       return swarmFile;
    }
 
+   public void clearDeployment(DeploymentColor color) {
+      swarmDeployments.put(color, null);
+   }
+
    public boolean containsKey(WatchKey watchKey) {
       return this.watchKey.equals(watchKey);
+   }
+
+   public DeploymentColor currentDeploymentColor() {
+      DeploymentColor resultColor = null;
+
+      if (areAllDeploymentColorsFree()) {
+         return null;
+      } else if (getDeployment(DeploymentColor.BLUE) != null) {
+         resultColor = DeploymentColor.BLUE;
+      } else if (getDeployment(DeploymentColor.GREEN) != null) {
+         resultColor = DeploymentColor.GREEN;
+      }
+
+      return resultColor;
+   }
+
+   private boolean areAllDeploymentColorsFree() {
+      boolean result = false;
+      if ((getDeployment(DeploymentColor.BLUE) == null) && (getDeployment(DeploymentColor.GREEN) == null)) {
+         result = true;
+      }
+      return result;
+   }
+
+   public SwarmDeployment getDeployment(DeploymentColor color) {
+      return swarmDeployments.get(color);
    }
 
    public SwarmFile findFirstSwarmFileWithState(SwarmFile.State fileState) {
@@ -65,9 +95,11 @@ public class DeploymentContainer {
       return resultSwarmFile;
    }
 
-   public String getConsulHealthServiceUrl() {
-      return deploymentContainerCfg.getConsulServiceHealthUrl();
+   public String getConsulServiceName() {
+      return deploymentContainerCfg.getConsulServiceName();
    }
+
+   public String getConsulUrl() { return deploymentContainerCfg.getConsulUrl(); }
 
    public File getDestFolder() {
       return deploymentContainerCfg.getDestFolder();
@@ -87,10 +119,6 @@ public class DeploymentContainer {
 
    public String getName() {
       return deploymentContainerCfg.getName();
-   }
-
-   public void setWatchKey(WatchKey watchKey) {
-      this.watchKey = watchKey;
    }
 
    public boolean isDeploymentInProgress() {
@@ -130,27 +158,11 @@ public class DeploymentContainer {
    public File getTargetPath() { return deploymentContainerCfg.getDestFolder(); }
 
    public DeploymentColor nextDeploymentColor() {
-      DeploymentColor freeDeploymentColor = freeDeploymentColor();
-      if (freeDeploymentColor != null) {
-         return freeDeploymentColor;
-      }
-      // Take the deployment with older timestamp
-      long blueProcessStart  = getDeployment(DeploymentColor.BLUE).getProcessTimeStart();
-      long greenProcessStart = getDeployment(DeploymentColor.GREEN).getProcessTimeStart();
-      return blueProcessStart > greenProcessStart ? DeploymentColor.GREEN : DeploymentColor.BLUE;
-   }
-
-   public DeploymentColor freeDeploymentColor() {
-      if (swarmDeployments.get(DeploymentColor.BLUE) == null) {
+      if (getDeployment(DeploymentColor.BLUE) == null) {
          return DeploymentColor.BLUE;
-      } else if (swarmDeployments.get(DeploymentColor.GREEN) == null) {
-         return DeploymentColor.GREEN;
       }
-      return null;
-   }
 
-   public SwarmDeployment getDeployment(DeploymentColor color) {
-      return swarmDeployments.get(color);
+      return DeploymentColor.GREEN;
    }
 
    public boolean removeSwarmFile(SwarmFile swarmFileToBeRemoved) {
@@ -164,5 +176,9 @@ public class DeploymentContainer {
 
    public void setDeployment(DeploymentColor color, SwarmDeployment swarmDeployment) {
       swarmDeployments.put(color, swarmDeployment);
+   }
+
+   public void setWatchKey(WatchKey watchKey) {
+      this.watchKey = watchKey;
    }
 }

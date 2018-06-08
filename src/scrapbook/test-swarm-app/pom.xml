@@ -56,23 +56,28 @@
             <version>7.0</version>
             <scope>provided</scope>
         </dependency>
-        <!-- WildFly Swarm Fractions -->
+
+        <!-- WildFly Swarm Fractions
+        <dependency>
+            <groupId>org.wildfly.swarm</groupId>
+            <artifactId>management</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.wildfly.swarm</groupId>
+            <artifactId>management-console</artifactId>
+        </dependency>
+        -->
+
         <dependency>
             <groupId>org.wildfly.swarm</groupId>
             <artifactId>jaxrs-validator</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wildfly.swarm</groupId>
-            <artifactId>management-console</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.wildfly.swarm</groupId>
-            <artifactId>management</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.wildfly.swarm</groupId>
             <artifactId>jaxrs</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.wildfly.swarm</groupId>
             <artifactId>topology-consul</artifactId>

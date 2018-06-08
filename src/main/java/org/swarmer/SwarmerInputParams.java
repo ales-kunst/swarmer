@@ -2,13 +2,8 @@ package org.swarmer;
 
 public class SwarmerInputParams {
 
-   public static String iniFilePath() {
-      return System.getProperty("swarm.starter.configuration.filepath",
-                                "D:\\programming\\java\\swarmer\\src\\test\\resources\\swarmer.ini");
-   }
-
    public static String jsonFilePath() {
-      return System.getProperty("swarm.starter.configuration.filepath",
+      return System.getProperty("swarmer.configuration.file",
                                 "D:\\programming\\java\\swarmer\\src\\test\\resources\\swarmer_config.json");
    }
 

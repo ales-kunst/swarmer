@@ -2,7 +2,7 @@ package org.swarmer.context;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.swarmer.util.SwarmExecutor;
+import org.swarmer.util.SwarmUtil;
 
 public class SwarmDeployment {
    private static final Logger    LOG = LogManager.getLogger(SwarmDeployment.class);
@@ -26,7 +26,7 @@ public class SwarmDeployment {
    }
 
    public String getLogFilename() {
-      return SwarmExecutor.getLogFilename(swarmCommand);
+      return SwarmUtil.getLogFilename(swarmCommand);
    }
 
    public String[] getSwarmCommand() {
@@ -50,7 +50,7 @@ public class SwarmDeployment {
    }
 
    public void hardKillSwarm() {
-      SwarmExecutor.killSwarmWindow(windowTitle);
+      SwarmUtil.killSwarmWindow(windowTitle);
    }
 
    public void setSwarmState(SwarmFile.State state, Exception e) {
@@ -60,16 +60,16 @@ public class SwarmDeployment {
    public void sigIntProces() {
       int pid = getPid();
       if (pid != -1) {
-         SwarmExecutor.sigIntSwarm(pid);
+         SwarmUtil.sigIntSwarm(pid);
       }
    }
 
    public int getPid() {
-      return SwarmExecutor.getSwarmPID(swarmFile.getFilename(), processTimeStart);
+      return SwarmUtil.getSwarmPID(swarmFile.getFilename(), processTimeStart);
    }
 
    public boolean waitForSwarmToShutdown() {
-      boolean swarmExited = SwarmExecutor.waitUntilSwarmProcExits(swarmFile.getFilename(), processTimeStart, 300, 1000);
+      boolean swarmExited = SwarmUtil.waitUntilSwarmProcExits(swarmFile.getFilename(), processTimeStart, 300, 1000);
       return swarmExited;
    }
 }

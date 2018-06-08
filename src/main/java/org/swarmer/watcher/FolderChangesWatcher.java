@@ -8,7 +8,7 @@ import org.swarmer.context.DeploymentContainer;
 import org.swarmer.context.SwarmFile;
 import org.swarmer.context.SwarmerContext;
 import org.swarmer.util.FileUtil;
-import org.swarmer.util.SwarmExecutor;
+import org.swarmer.util.SwarmUtil;
 
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
@@ -121,7 +121,7 @@ public class FolderChangesWatcher extends InfiniteThreadOperation<SwarmerContext
 
       if (!canSrcFileBeLocked) {
          LOG.trace("Sleep for {} ms", SwarmerContext.instance().getLockWaitTimeout());
-         SwarmExecutor.waitFor(SwarmerContext.instance().getLockWaitTimeout());
+         SwarmUtil.waitFor(SwarmerContext.instance().getLockWaitTimeout());
          canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
       }
       // Remove Dest file only if it exists and src file can be locked

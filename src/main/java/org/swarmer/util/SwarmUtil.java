@@ -1,11 +1,13 @@
 package org.swarmer.util;
 
+import com.ecwid.consul.v1.health.model.Check;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -14,22 +16,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 
-public class SwarmExecutor {
+public class SwarmUtil {
    public static final  String UID_JVM_ARG           = "-Duid=";
    private static final String CMD_COMMAND           = "cmd.exe";
    private static final String JAR_OPTION            = "-jar";
    private static final String JAVA_COMMAND          = "java";
    private static final String JVM_SWARM_PORT_OPTION = "-Dswarm.http.port=";
-   private static final Logger LOG                   = LogManager.getLogger(SwarmExecutor.class);
+   private static final String APP_ARG_DELIMETER     = " ";
    private static final String RUN_COMMAND_OPTION    = "/c";
    private static final String START_COMMAND         = "start";
    private static final String START_PATH_OPTION     = "/D";
+   private static final String JVM_ARG_DELIMETER     = "-D";
+   private static final Logger LOG                   = LogManager.getLogger(SwarmUtil.class);
 
    public static String[] createSwarmCliArguments(String windowTitle, String port, String jvmArgs, long uid,
                                                   String appArgs,
                                                   File swarmJar) {
-      final String JVM_ARG_DELIMETER = "-D";
-      final String APP_ARG_DELIMETER = " ";
+
       List<String> cliArgs           = new ArrayList<>();
       cliArgs.add(CMD_COMMAND);
       cliArgs.add(RUN_COMMAND_OPTION);
@@ -152,22 +155,24 @@ public class SwarmExecutor {
       return logFilename + ".log";
    }
 
-   public static boolean waitForServiceRegistration(Process process, String consulServiceHealthUrl,
+   public static boolean waitForServiceRegistration(String consulUrl, String serviceName, String serviceId,
                                                     int appWaitTimeoutSeconds,
-                                                    long loopWaitMillis) {
-      // Lambda expression
+                                                    long loopWaitMillis) throws IOException {
+      ConsulQuery consulQuery = ConsulQuery.url(consulUrl);
       Predicate<Integer> waitForServiceRegistrationPred = (Integer time) -> {
-         boolean      success     = false;
-         StringBuffer urlContents = NetUtils.getUrlContent(consulServiceHealthUrl);
-         if (!urlContents.toString().equalsIgnoreCase("[]")) {
+         boolean     success            = false;
+         final Check swarmInstanceCheck = consulQuery.getSwarmInstance(serviceName, serviceId);
+         if ((swarmInstanceCheck != null) && swarmInstanceCheck.getStatus().equals(Check.CheckStatus.PASSING)) {
             success = true;
          }
+
          return success;
       };
-      return waitLoop(process, waitForServiceRegistrationPred, appWaitTimeoutSeconds, loopWaitMillis);
+
+      return waitLoop(waitForServiceRegistrationPred, appWaitTimeoutSeconds, loopWaitMillis);
    }
 
-   private static boolean waitLoop(Process process, Predicate<Integer> predicate, int waitTimeout,
+   private static boolean waitLoop(Predicate<Integer> predicate, int waitTimeout,
                                    long loopWaitMillis) {
       boolean successfulRun = false;
       int     timeWaited    = 0;
@@ -195,8 +200,10 @@ public class SwarmExecutor {
       return success;
    }
 
+
    public static boolean waitUntilSwarmProcExits(String swarmJar, long uid, int shutdownTimeoutSeconds,
                                                  long loopWaitMillis) {
+      // TODO Refactor method waitUntilSwarmProcExits
       boolean processExited = false;
       int     timeWaited    = 0;
       while (true) {
@@ -241,5 +248,5 @@ public class SwarmExecutor {
       return pid;
    }
 
-   private SwarmExecutor() {}
+   private SwarmUtil() {}
 }
