@@ -5,8 +5,6 @@ import com.ecwid.consul.v1.QueryParams;
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.health.model.Check;
 import com.ecwid.consul.v1.health.model.HealthService;
-import io.advantageous.consul.discovery.ConsulServiceDiscoveryBuilder;
-import io.advantageous.qbit.service.discovery.ServiceDiscovery;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -14,10 +12,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class ConsulQuery {
-   private static final ConsulServiceDiscoveryBuilder CONSUL_SERVICE_DISCOVERY_BUILDER =
-           ConsulServiceDiscoveryBuilder.consulServiceDiscoveryBuilder();
-
-   private final ServiceDiscovery consulClient;
    private final ConsulClient     consulClientNew;
 
    public static ConsulQuery url(String consulUrlText) throws MalformedURLException {
@@ -26,8 +20,6 @@ public class ConsulQuery {
    }
 
    private ConsulQuery(URL consulUrl) {
-      this.consulClient = CONSUL_SERVICE_DISCOVERY_BUILDER.setConsulHost(consulUrl.getHost())
-                                                          .setConsulPort(consulUrl.getPort()).build();
       this.consulClientNew = new ConsulClient(consulUrl.getHost(), consulUrl.getPort());
    }
 

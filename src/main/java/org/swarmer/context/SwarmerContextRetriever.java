@@ -24,8 +24,7 @@ public class SwarmerContextRetriever {
       }
       LOG.info("Reading configuration from {} file.", jsonPathname);
       SwarmerCfg swarmerCfg = OBJECT_MAPPER.readerFor(SwarmerCfg.class).readValue(jsonFile);
-      SwarmerContext.reset(SwarmerContext.newBuilder(swarmerCfg).buildFromCfg());
-      return SwarmerContext.instance();
+      return SwarmerContext.newBuilder(swarmerCfg).buildFromCfg();
    }
 
    /**

@@ -1,4 +1,4 @@
-package org.swarmer.executor;
+package org.swarmer.operation.executor;
 
 import org.apache.commons.lang.math.IntRange;
 import org.apache.logging.log4j.LogManager;
@@ -63,31 +63,6 @@ public class SwarmDeploymentExecutor {
          String errMsg = String.format("No available ports in the range %s", portRange.toString());
          LOG.error(errMsg);
       }
-
-      /*
-      if (port != -1) {
-         boolean oldDeploymentExitedSuccessful = shutdownOldDeployment();
-         // Check if old swarm was stopped succesfully
-         if (oldDeploymentExitedSuccessful) {
-            SwarmDeployment swarmDeployment = new SwarmDeployment(copiedSwarmFile, port);
-            boolean         execSuccessful  = executeSwarmProcess(swarmDeployment);
-            if (execSuccessful) {
-               deploymentContainer.setDeployment(colorToDeploy, swarmDeployment);
-               LOG.error("Swarm started!");
-            } else {
-               LOG.error("Swarm could not be started! See log file [{}]", swarmDeployment.getLogFilename());
-            }
-         } else {
-            SwarmDeployment oldSwarmDeployment = deploymentContainer.getDeployment(colorToDeploy);
-            String          errMsg             = String.format(SWARM_DEPLOYMENT_COULD_NOT_BE_STOPPED,
-                                                               oldSwarmDeployment.getWindowTitle());
-            LOG.error(errMsg);
-         }
-      } else {
-         String errMsg = String.format("No available ports in the range %s", portRange.toString());
-         LOG.error(errMsg);
-      }
-      */
    }
 
    private boolean executeSwarmProcess(SwarmDeployment swarmDeployment) throws IOException {

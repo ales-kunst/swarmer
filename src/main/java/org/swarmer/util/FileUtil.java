@@ -54,7 +54,7 @@ public class FileUtil {
       InputStream  inStream  = null;
       OutputStream outStream = null;
       try {
-         inStream = SwarmUtil.class.getResourceAsStream(resourcePath);
+         inStream = FileUtil.class.getResourceAsStream(resourcePath);
          outStream = new FileOutputStream(targetpath);
          byte[] buffer = new byte[1024];
          int    length;

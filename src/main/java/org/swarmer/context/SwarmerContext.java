@@ -18,26 +18,13 @@ import java.util.Optional;
 public class SwarmerContext {
    private static final Object         DEPLOYMENT_CONTAINER_LOCK     = new Object();
    private static final Logger         LOG                           = LogManager.getLogger(SwarmerContext.class);
-   private static       SwarmerContext ctxInstance                   = null;
 
    protected List<DeploymentContainer> deploymentContainers;
    protected WatchService              watchService;
    private   SwarmerCfg.GeneralData    swarmerCfgGeneralData;
 
-   public static SwarmerContext instance() {
-      return ctxInstance;
-   }
-
-   static Builder newBuilder() {
-      return new Builder();
-   }
-
    static Builder newBuilder(SwarmerCfg swarmerCfg) {
       return new Builder(swarmerCfg);
-   }
-
-   static void reset(SwarmerContext ctxInstance) {
-      SwarmerContext.ctxInstance = ctxInstance;
    }
 
    private SwarmerContext(Builder builder) {

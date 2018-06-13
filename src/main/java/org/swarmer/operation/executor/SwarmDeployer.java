@@ -1,35 +1,29 @@
-package org.swarmer.executor;
+package org.swarmer.operation.executor;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.swarmer.InfiniteThreadOperation;
 import org.swarmer.context.DeploymentContainer;
 import org.swarmer.context.SwarmFile;
 import org.swarmer.context.SwarmerContext;
+import org.swarmer.operation.InfiniteLoopOperation;
 import org.swarmer.util.SwarmUtil;
 
 import java.io.IOException;
 
-public class SwarmDeployer extends InfiniteThreadOperation<SwarmerContext> {
+public class SwarmDeployer extends InfiniteLoopOperation<SwarmerContext> {
+   public static final  String OP_NAME = "Swarm Deployment Executor";
    private static final Logger LOG = LogManager.getLogger(SwarmDeployer.class);
 
-   public SwarmDeployer(SwarmerContext context) {
-      super(context);
+   public SwarmDeployer(String name, SwarmerContext context) {
+      super(name, context);
    }
 
    @Override
-   protected String threadName() {
-      return "Swarm Deployment Executor";
-   }
+   public void cleanUp() {}
 
    @Override
    protected void operationInitialize() { }
-
-   @Override
-   protected boolean shouldStop() {
-      return false;
-   }
 
    @Override
    protected void loopBlock() {
