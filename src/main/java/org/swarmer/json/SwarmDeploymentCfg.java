@@ -7,19 +7,30 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SwarmDeploymentCfg {
-   private final Integer processTimeStart;
-   private final String  swarmFilePath;
+   private String  deploymentColor;
+   private Integer pid;
+   private String  swarmFilePath;
+   private String  windowTitle;
 
    @JsonCreator
-   public SwarmDeploymentCfg(@JsonProperty("swarm_file_path") String swarmFilePath,
-                             @JsonProperty("process_time_start") Integer processTimeStart) {
+   public SwarmDeploymentCfg(@JsonProperty("deployment_color") String deploymentColor,
+                             @JsonProperty("swarm_file_path") String swarmFilePath,
+                             @JsonProperty("pid") Integer pid,
+                             @JsonProperty("window_title") String windowTitle) {
+      this.deploymentColor = deploymentColor;
       this.swarmFilePath = swarmFilePath;
-      this.processTimeStart = processTimeStart;
+      this.pid = pid;
+      this.windowTitle = windowTitle;
    }
 
-   @JsonGetter("process_time_start")
-   public Integer getProcessTimeStart() {
-      return processTimeStart;
+   @JsonGetter("deployment_color")
+   public String getDeploymentColor() {
+      return deploymentColor;
+   }
+
+   @JsonGetter("pid")
+   public Integer getPid() {
+      return pid;
    }
 
    @JsonGetter("swarm_file_path")
@@ -27,11 +38,26 @@ public class SwarmDeploymentCfg {
       return swarmFilePath;
    }
 
+   @JsonGetter("window_title")
+   public String getWindowTitle() {
+      return windowTitle;
+   }
+
+   public boolean isBlueDeployment() {
+      return deploymentColor.equalsIgnoreCase("blue");
+   }
+
+   public boolean isGreenDeployment() {
+      return deploymentColor.equalsIgnoreCase("green");
+   }
+
    @Override
    public String toString() {
       return "SwarmDeploymentCfg{" +
-             "processTimeStart=" + processTimeStart +
+             "deploymentColor='" + deploymentColor + '\'' +
              ", swarmFilePath='" + swarmFilePath + '\'' +
+             ", pid=" + pid +
+             ", windowTitle='" + windowTitle + '\'' +
              '}';
    }
 }

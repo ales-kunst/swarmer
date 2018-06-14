@@ -17,7 +17,14 @@
          "jvm_params"            : "-Dfile.encoding=UTF-8 -Dswarm.bind.address=127.0.0.1 -Djava.io.tmpdir=D:\\swarm_temp",
          "consul_url"            : "http://127.0.0.1:8500",
          "consul_service_name"   : "QnstMS",
-         "swarm_deployment_list" : []
+         "swarm_deployment_list" : [
+            {
+               "deployment_color" : "green",
+               "swarm_file_path"  : "D:\\temp\\tmp\\demo-swarm-01.jar",
+               "pid"              : -1,
+               "window_title"     : "partner GREEN"
+            }
+         ]
       }
    ]
 }

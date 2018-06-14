@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.swarmer.exception.ExceptionThrower;
 import org.swarmer.exception.ValidationException;
 import org.swarmer.json.DeploymentContainerCfg;
+import org.swarmer.json.SwarmDeploymentCfg;
 
 import java.io.File;
 import java.nio.file.WatchKey;
@@ -28,14 +29,24 @@ public class DeploymentContainer {
    private WatchKey                              watchKey;
 
    public DeploymentContainer(DeploymentContainerCfg deploymentContainerCfg) {
+      this.deploymentContainerCfg = deploymentContainerCfg;
       this.fileSuccessfullyLocked = false;
       this.swarmFilesQueue = new ArrayList<>();
       this.deploymentInProgress = false;
+      initSwarmDeployment();
+   }
+
+   private void initSwarmDeployment() {
       this.swarmDeployments = new HashMap<DeploymentColor, SwarmDeployment>() {{
          put(DeploymentColor.BLUE, null);
          put(DeploymentColor.GREEN, null);
       }};
-      this.deploymentContainerCfg = deploymentContainerCfg;
+      SwarmDeploymentCfg swarmDeploymentCfg = deploymentContainerCfg.getSwarmDeploymentCfg(0);
+      if (swarmDeploymentCfg.isGreenDeployment()) {
+         setDeployment(DeploymentColor.GREEN, SwarmDeployment.builder(swarmDeploymentCfg).build());
+      } else if (swarmDeploymentCfg.isBlueDeployment()) {
+         setDeployment(DeploymentColor.BLUE, SwarmDeployment.builder(swarmDeploymentCfg).build());
+      }
    }
 
    public SwarmFile addSwarmFile(File file, SwarmFile.State fileState, long fileSize) {

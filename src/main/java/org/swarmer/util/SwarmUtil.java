@@ -136,7 +136,7 @@ public class SwarmUtil {
       return process;
    }
 
-   public static String getLogFilename(String[] command) {
+   private static String getLogFilename(String[] command) {
       String logFilename;
       String jarArg = null;
       String uidArg = null;
