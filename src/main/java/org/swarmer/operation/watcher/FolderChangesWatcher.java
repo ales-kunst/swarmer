@@ -5,27 +5,44 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.swarmer.context.SwarmJob;
 import org.swarmer.context.SwarmerCtx;
+import org.swarmer.json.DeploymentContainerCfg;
+import org.swarmer.json.SwarmerCfg;
 import org.swarmer.operation.InfiniteLoopOperation;
 import org.swarmer.util.FileUtil;
 import org.swarmer.util.SwarmUtil;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class FolderChangesWatcher extends InfiniteLoopOperation {
    public static final  String OP_NAME = "Folder Watcher";
    private static final Logger LOG     = LogManager.getLogger(FolderChangesWatcher.class);
 
+   private SwarmerCfg cfg;
+   private Set<Integer> succesfullyLocked;
+
    public FolderChangesWatcher(String name, SwarmerCtx context) {
       super(name, context);
+      succesfullyLocked = new HashSet<>();
    }
 
    @Override
    protected void operationInitialize() {
+      cfg = getContext().getCfg();
+   }
+
+   private SwarmerCfg getCfg() {
+      if (cfg.getSwarmerCtxId() != getContext().getId()) {
+         cfg = getContext().getCfg();
+      }
+      return cfg;
    }
 
    @Override
@@ -56,11 +73,11 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
 
          String  srcFilename            = srcPath.toFile().getName();
          boolean isFile                 = srcPath.toFile().isFile();
-         String  filePattern            = getContext().getFilePattern(queuedKey);
+         String  filePattern            = getFilePattern(queuedKey);
          boolean fileMatchesPattern     = FileUtil.matchesFilePattern(srcFilename, filePattern);
          boolean isValidFile            = isFile && fileMatchesPattern;
          boolean isValidModifyEvent     = (watchEvent.kind() == StandardWatchEventKinds.ENTRY_MODIFY) && isValidFile;
-         boolean fileSuccessfullyLocked = getContext().isFileSuccessfullyLocked(queuedKey);
+         boolean fileSuccessfullyLocked = isFileSuccessfullyLocked(queuedKey);
 
          if (isValidModifyEvent) {
             LOG.debug("Event... kind={}, count={}, context={} path={}", watchEvent.kind(), watchEvent.count(),
@@ -71,7 +88,7 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
          if (isValidModifyEvent && !fileSuccessfullyLocked) {
             processModifyEvent(queuedKey, watchEvent);
          } else if (isValidModifyEvent && fileSuccessfullyLocked) {
-            getContext().clearFileSuccessfullyLocked(queuedKey);
+            clearFileSuccessfullyLocked(queuedKey);
          }
       }
       LOG.info("Ended polling watch events [size: {}]\n", pollEvents.size());
@@ -115,14 +132,14 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
          LOG.warn("File not copied because source file can not be locked.");
       } else if (destFileExists) {
          // We have to add that the lock has happened for next two events should be ignored
-         getContext().setFileSuccessfullyLocked(queuedKey);
+         setFileSuccessfullyLocked(queuedKey);
          LOG.error("Destination file [{}] is locked by another process.", destPath);
       } else if (fileAccessConditionsOk) {
-         getContext().setFileSuccessfullyLocked(queuedKey);
+         setFileSuccessfullyLocked(queuedKey);
          LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
                   srcPath.toFile().length());
          FileUtil.nioBufferCopy(srcPath.toFile(), destPath.toFile());
-         String containerName = getContext().getContainerName(queuedKey);
+         String containerName = getContainerName(queuedKey);
          getContext().addSwarmJob(SwarmJob.builder()
                                           .action(SwarmJob.Action.RUN_NEW)
                                           .containerName(containerName)
@@ -135,9 +152,44 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       // this is not a complete path
       Path file = (Path) watchEvent.context();
       // need to get parent path
-      Path parentPath = getContext().getDestFolder(queuedKey).toPath();
+      Path parentPath = getDestFolder(queuedKey).toPath();
 
       return parentPath.resolve(file);
+   }
+
+   private File getDestFolder(WatchKey watchKey) {
+      return findDeploymentCfg(watchKey).getDestFolder();
+   }
+
+   private String getFilePattern(WatchKey watchKey) {
+      return findDeploymentCfg(watchKey).getFilePattern();
+   }
+
+   private String getContainerName(WatchKey watchKey) {
+      return findDeploymentCfg(watchKey).getName();
+   }
+
+   private void setFileSuccessfullyLocked(WatchKey watchKey) {
+      succesfullyLocked.add(watchKey.hashCode());
+   }
+
+   private boolean isFileSuccessfullyLocked(WatchKey watchKey) {
+      return succesfullyLocked.contains(watchKey.hashCode());
+   }
+
+   private void clearFileSuccessfullyLocked(WatchKey watchKey) {
+      succesfullyLocked.remove(watchKey.hashCode());
+   }
+
+   private DeploymentContainerCfg findDeploymentCfg(WatchKey watchKey) {
+      for (int index = 0; index < cfg.deploymentContainerCfgsSize(); index++) {
+         DeploymentContainerCfg containerCfg = cfg.getDeploymentContainerCfg(index);
+         String hashCode = Integer.toString(watchKey.hashCode());
+         if (containerCfg.getWatchKeyHash().equals(hashCode)) {
+            return containerCfg;
+         }
+      }
+      return null;
    }
 
    @Override

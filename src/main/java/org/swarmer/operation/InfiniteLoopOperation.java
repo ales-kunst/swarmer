@@ -3,6 +3,7 @@ package org.swarmer.operation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.swarmer.context.SwarmerCtx;
+import org.swarmer.exception.ExceptionThrower;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -53,7 +54,7 @@ public abstract class InfiniteLoopOperation extends SwarmerOperation<SwarmerCtx>
       }
    }
 
-   private void executeLoop() {
+   private void executeLoop() throws Exception {
       setState(SwarmerOperation.State.RUNNING);
       try {
          LOG.info("Starting {}", name());
@@ -79,7 +80,7 @@ public abstract class InfiniteLoopOperation extends SwarmerOperation<SwarmerCtx>
       }
    }
 
-   protected abstract void operationInitialize();
+   protected abstract void operationInitialize() throws Exception;
 
    private boolean running() {
       return running.get();
@@ -100,7 +101,11 @@ public abstract class InfiniteLoopOperation extends SwarmerOperation<SwarmerCtx>
 
       @Override
       public void run() {
-         operation.executeLoop();
+         try {
+            operation.executeLoop();
+         } catch (Exception e) {
+            ExceptionThrower.throwRuntimeError(e);
+         }
       }
    }
 

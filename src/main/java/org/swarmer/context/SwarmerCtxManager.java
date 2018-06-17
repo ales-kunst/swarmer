@@ -70,13 +70,9 @@ public class SwarmerCtxManager {
       ctx = null;
    }
 
-   public SwarmerCfg getCtxCfg() throws CloneNotSupportedException {
-      SwarmerCfg resultCtxCfg = null;
+   public SwarmerCfg getCtxCfg() {
       synchronized (CTX_LOCK) {
-         if (ctx != null) {
-            resultCtxCfg = ctx.getSwarmerCfg();
-         }
+         return ctx.getCfg();
       }
-      return resultCtxCfg;
    }
 }

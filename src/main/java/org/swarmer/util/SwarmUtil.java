@@ -235,6 +235,11 @@ public class SwarmUtil {
 
    private static int parsePID(String content, String swarmJar, long uid) {
       int     pid  = -1;
+
+      if (content.isEmpty()) {
+         return pid;
+      }
+
       Scanner sc   = new Scanner(content);
       String  line = null;
       while (sc.hasNextLine() || (line == null)) {

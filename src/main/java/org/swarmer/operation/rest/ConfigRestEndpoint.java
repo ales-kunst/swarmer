@@ -7,6 +7,8 @@ import org.rapidoid.annotation.GET;
 import org.rapidoid.annotation.Param;
 import org.swarmer.MainExecutor;
 import org.swarmer.SwarmerInputParams;
+import org.swarmer.context.CfgCreator;
+import org.swarmer.context.CtxElementVisitor;
 import org.swarmer.context.SwarmerCtxManager;
 import org.swarmer.exception.ExceptionThrower;
 import org.swarmer.json.SwarmerCfg;
@@ -43,7 +45,7 @@ public class ConfigRestEndpoint {
    }
 
    @GET("/")
-   public SwarmerCfg getCtxConfig() throws CloneNotSupportedException {
+   public SwarmerCfg getCtxConfig() throws Exception {
       return SwarmerCtxManager.instance().getCtxCfg();
    }
 
