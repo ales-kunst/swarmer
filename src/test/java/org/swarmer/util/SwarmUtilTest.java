@@ -6,14 +6,14 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.swarmer.context.SwarmerContext;
+import org.swarmer.context.SwarmerCtx;
 
 import java.io.File;
 import java.io.IOException;
 
 public class SwarmUtilTest {
    private static final int    DEFAULT_SWARM_STARTUP_TIME = 300;
-   private static final Logger LOG                        = LogManager.getLogger(SwarmerContext.class);
+   private static final Logger LOG                        = LogManager.getLogger(SwarmerCtx.class);
    private static final String TMP_FOLDER                 = System.getProperty("java.io.tmpdir");
    private static final String CONSUL_EXEC_PATH           = TMP_FOLDER + "\\consul.exe";
 
@@ -46,7 +46,7 @@ public class SwarmUtilTest {
 
    @Test
    public void testCreateSwarmCliArguments() {
-      String     jarPath = ".\\src\\scrapbook\\test-swarm-app\\target\\demo-swarm.jar";
+      String     jarPath = ".\\src\\scrapbook\\test-rest-app\\target\\demo-rest.jar";
       File       jarFile = new File(jarPath);
       final long uid     = System.currentTimeMillis();
       String[] commandLine = SwarmUtil.createSwarmCliArguments("Blue Instance",
@@ -58,7 +58,7 @@ public class SwarmUtilTest {
       Assert.assertEquals("start", commandLine[2]);
       Assert.assertEquals("Blue Instance", commandLine[3]);
       Assert.assertEquals("/D", commandLine[4]);
-      Assert.assertEquals(".\\src\\scrapbook\\test-swarm-app\\target", commandLine[5]);
+      Assert.assertEquals(".\\src\\scrapbook\\test-rest-app\\target", commandLine[5]);
       Assert.assertEquals(FileUtil.WIN_TEE_APP_PATH, commandLine[6]);
       Assert.assertEquals("java", commandLine[7]);
       Assert.assertEquals((SwarmUtil.UID_JVM_ARG + uid), commandLine[8]);
@@ -73,16 +73,16 @@ public class SwarmUtilTest {
    @Test
    public void testGetSwarmPID() throws IOException {
       long uid = startSwarm();
-      int  pid = SwarmUtil.getSwarmPID("demo-swarm.jar", uid);
+      int  pid = SwarmUtil.getSwarmPID("demo-rest.jar", uid);
       Assert.assertTrue(pid != -1);
       FileUtil.copyWindowsKillAppToTmp();
       SwarmUtil.sigIntSwarm(pid);
-      waitSwarmToShutDown("demo-swarm.jar", uid);
+      waitSwarmToShutDown("demo-rest.jar", uid);
    }
 
    private long startSwarm() throws IOException {
       final String WINDOW_NAME = "Blue Instance";
-      String       jarPath     = ".\\src\\scrapbook\\test-swarm-app\\target\\demo-swarm.jar";
+      String       jarPath     = ".\\src\\scrapbook\\test-rest-app\\target\\demo-rest.jar";
       File         jarFile     = new File(jarPath);
       final long   uid         = System.currentTimeMillis();
       final String jvmArgs     = "-Duid=" + uid + " -Djava.io.tmpdir=D:\\temp\\some_tmp";
@@ -124,7 +124,7 @@ public class SwarmUtilTest {
    @Test
    public void testHealthStatusOfSwarm() throws IOException {
       final String WINDOW_NAME = "Blue Instance";
-      String       jarPath     = ".\\src\\scrapbook\\test-swarm-app\\target\\demo-swarm.jar";
+      String       jarPath     = ".\\src\\scrapbook\\test-rest-app\\target\\demo-rest.jar";
       File         jarFile     = new File(jarPath);
       final long   uid         = System.currentTimeMillis();
       final String jvmArgs     = "-Duid=" + uid + " -Djava.io.tmpdir=D:\\temp\\some_tmp";
@@ -155,7 +155,7 @@ public class SwarmUtilTest {
    @Test
    public void testStartSwarmInstance() {
       final String WINDOW_NAME = "Blue Instance";
-      String       jarPath     = ".\\src\\scrapbook\\test-swarm-app\\target\\demo-swarm.jar";
+      String       jarPath     = ".\\src\\scrapbook\\test-rest-app\\target\\demo-rest.jar";
       File         jarFile     = new File(jarPath);
       final long   uid         = System.currentTimeMillis();
       String[] swarmArgs = SwarmUtil.createSwarmCliArguments(WINDOW_NAME,

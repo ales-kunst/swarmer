@@ -59,12 +59,12 @@
 
         <!-- WildFly Swarm Fractions
         <dependency>
-            <groupId>org.wildfly.swarm</groupId>
+            <groupId>org.wildfly.rest</groupId>
             <artifactId>management</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.wildfly.swarm</groupId>
+            <groupId>org.wildfly.rest</groupId>
             <artifactId>management-console</artifactId>
         </dependency>
         -->

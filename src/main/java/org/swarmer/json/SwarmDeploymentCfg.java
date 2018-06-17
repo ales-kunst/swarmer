@@ -1,12 +1,10 @@
 package org.swarmer.json;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
+import org.swarmer.context.DeploymentColor;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class SwarmDeploymentCfg {
+public class SwarmDeploymentCfg implements Cloneable {
    private String  deploymentColor;
    private Integer pid;
    private String  swarmFilePath;
@@ -23,9 +21,28 @@ public class SwarmDeploymentCfg {
       this.windowTitle = windowTitle;
    }
 
+   public Object clone() throws CloneNotSupportedException {
+      return super.clone();
+   }
+
+   @Override
+   public String toString() {
+      return "SwarmDeploymentCfg{" +
+             "deploymentColor='" + deploymentColor + '\'' +
+             ", swarmFilePath='" + swarmFilePath + '\'' +
+             ", pid=" + pid +
+             ", windowTitle='" + windowTitle + '\'' +
+             '}';
+   }
+
    @JsonGetter("deployment_color")
    public String getDeploymentColor() {
       return deploymentColor;
+   }
+
+   @JsonIgnore
+   public DeploymentColor getDeploymentColorEnum() {
+      return DeploymentColor.value(deploymentColor);
    }
 
    @JsonGetter("pid")
@@ -43,21 +60,13 @@ public class SwarmDeploymentCfg {
       return windowTitle;
    }
 
+   @JsonIgnore
    public boolean isBlueDeployment() {
       return deploymentColor.equalsIgnoreCase("blue");
    }
 
+   @JsonIgnore
    public boolean isGreenDeployment() {
       return deploymentColor.equalsIgnoreCase("green");
-   }
-
-   @Override
-   public String toString() {
-      return "SwarmDeploymentCfg{" +
-             "deploymentColor='" + deploymentColor + '\'' +
-             ", swarmFilePath='" + swarmFilePath + '\'' +
-             ", pid=" + pid +
-             ", windowTitle='" + windowTitle + '\'' +
-             '}';
    }
 }

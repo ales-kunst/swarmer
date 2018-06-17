@@ -1,4 +1,4 @@
-package org.swarmer.operation.swarm;
+package org.swarmer.operation.rest;
 
 import com.fizzed.rocker.Rocker;
 import com.fizzed.rocker.RockerOutput;
@@ -8,20 +8,19 @@ import org.apache.logging.log4j.Logger;
 import org.rapidoid.http.MediaType;
 import org.rapidoid.http.Req;
 import org.rapidoid.http.Resp;
-import org.rapidoid.log.Log;
 import org.rapidoid.setup.App;
 import org.rapidoid.setup.AppBootstrap;
 import org.rapidoid.setup.My;
 import org.rapidoid.setup.On;
-import org.swarmer.context.SwarmerContext;
+import org.swarmer.context.SwarmerCtx;
 import org.swarmer.operation.DefaultOperation;
 
-public class RestServerStarter extends DefaultOperation<SwarmerContext> {
+public class RestServerStarter extends DefaultOperation<SwarmerCtx> {
    public static final  String   OP_NAME = "REST Server";
    private static final Logger   LOG     = LogManager.getLogger(RestServerStarter.class);
    private              String[] cliArguments;
 
-   public RestServerStarter(String name, SwarmerContext context, String[] cliArguments) {
+   public RestServerStarter(String name, SwarmerCtx context, String[] cliArguments) {
       super(name, context);
       this.cliArguments = cliArguments;
    }
@@ -34,11 +33,10 @@ public class RestServerStarter extends DefaultOperation<SwarmerContext> {
    @Override
    protected void executionBock() {
       AppBootstrap bootstrap = App.run(cliArguments); // instead of App.bootstrap(args), which might start the server
-      Log.info("Starting application");
       // customizing the server address and port - before the server is bootstrapped
-      On.address("0.0.0.0").port(10080);
-      My.errorHandler((Req req, Resp resp, Throwable error) -> handleError(req, resp, error));
-      On.get("/hello").json((Req req) -> req.response().contentType(MediaType.JSON).result("Hello world"));
+      int port = getContext().getPort();
+      On.address("0.0.0.0").port(port);
+      My.errorHandler(this::handleError);
       bootstrap.beans();
    }
 

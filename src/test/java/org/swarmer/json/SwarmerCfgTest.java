@@ -16,7 +16,7 @@ public class SwarmerCfgTest {
    public void testCreateJsonFromSwarmerCfg() throws IOException {
       SwarmerCfg cfgObj = getDefaultSwarmerCfg();
       String     json   = JSON_MAPPER.writeValueAsString(cfgObj);
-      Assert.assertEquals(671, json.length());
+      Assert.assertEquals(530, json.length());
    }
 
    private SwarmerCfg getDefaultSwarmerCfg() throws IOException {
@@ -34,7 +34,7 @@ public class SwarmerCfgTest {
       Assert.assertEquals("C:\\winapp\\Java\\1.8.0_102\\X64\\JDK", cfgObj.getGeneralData().getJavaPath());
       Assert.assertEquals(90, cfgObj.getGeneralData().getSwarmDefaultStartupTime().intValue());
       Assert.assertEquals(1, cfgObj.deploymentContainerCfgsSize());
-      Assert.assertEquals(1, cfgObj.getDeploymentContainerCfg(0).swarmDeploymentCfgsSize());
+      Assert.assertEquals(0, cfgObj.getDeploymentContainerCfg(0).swarmDeploymentCfgsSize());
 
    }
 

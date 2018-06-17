@@ -3,8 +3,7 @@ package org.swarmer;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.swarmer.context.SwarmerContext;
-import org.swarmer.context.SwarmerContextRetriever;
+import org.swarmer.context.SwarmerCtxManager;
 import org.swarmer.util.FileUtil;
 
 import java.io.File;
@@ -23,10 +22,10 @@ public class Main {
          FileUtil.copyWindowsKillAppToTmp();
          FileUtil.copyWinTeeAppToTmp();
 
-         SwarmerContext ctx = SwarmerContextRetriever.retrieve(SwarmerInputParams.jsonFilePath());
+         SwarmerCtxManager.on(SwarmerInputParams.jsonAbsoluteFilePath());
          MainExecutor.cliArgs(args)
-                     .startOperations(ctx)
-                     .startRestServer(ctx)
+                     .startOperations()
+                     .startRestServer()
                      .waitToEnd();
          if (MainExecutor.finishedWithErrors()) {
             System.exit(ERROR_STATUS);

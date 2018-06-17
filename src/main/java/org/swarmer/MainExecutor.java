@@ -1,22 +1,27 @@
 package org.swarmer;
 
-import org.swarmer.context.SwarmerContext;
+import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.swarmer.context.SwarmerCtx;
+import org.swarmer.context.SwarmerCtxManager;
 import org.swarmer.operation.DefaultOperation;
 import org.swarmer.operation.InfiniteLoopOperation;
 import org.swarmer.operation.SwarmerOperation;
 import org.swarmer.operation.executor.SwarmDeployer;
-import org.swarmer.operation.swarm.RestServerStarter;
+import org.swarmer.operation.rest.RestServerStarter;
 import org.swarmer.operation.watcher.FolderChangesWatcher;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class MainExecutor {
-
-   private static MainExecutor                       instance;
-   private        String[]                           cliArgs;
-   private        Map<String, InfiniteLoopOperation> infiniteLoopOperations;
-   private        DefaultOperation                   restServer;
+   private static final Logger                             LOG = LogManager.getLogger(MainExecutor.class);
+   private static       SwarmerCtx                         ctx;
+   private static       MainExecutor                       instance;
+   private              String[]                           cliArgs;
+   private              Map<String, InfiniteLoopOperation> infiniteLoopOperations;
+   private              DefaultOperation                   restServer;
 
    public static MainExecutor cliArgs(String[] cliArgs) {
       return instance(cliArgs);
@@ -25,6 +30,7 @@ public class MainExecutor {
    private static MainExecutor instance(String[] cliArgs) {
       if (instance == null) {
          instance = new MainExecutor(cliArgs);
+         ctx = SwarmerCtxManager.instance().getCtx();
       }
       return instance;
    }
@@ -42,10 +48,17 @@ public class MainExecutor {
       this.cliArgs = cliArgs;
    }
 
-   public void restartOperations(SwarmerContext swarmerContext) throws InterruptedException {
+   public void restartOperations(SwarmerCtx newSwarmerCtx) throws InterruptedException {
       gracefullyStopOperations();
       infiniteLoopOperations.clear();
-      startOperations(swarmerContext);
+      try {
+         ctx.close();
+      } catch (Exception e) {
+         LOG.error("Error at closing old swarmer context! Continuing with restarting of processes!\n{}",
+                   ExceptionUtils.getStackTrace(e));
+      }
+      ctx = newSwarmerCtx;
+      startOperations();
    }
 
    private void gracefullyStopOperations() throws InterruptedException {
@@ -55,9 +68,9 @@ public class MainExecutor {
       }
    }
 
-   public MainExecutor startOperations(SwarmerContext swarmerContext) {
-      addOperation(folderWatcher(swarmerContext));
-      addOperation(swarmDeployer(swarmerContext));
+   public MainExecutor startOperations() {
+      addOperation(folderWatcher());
+      addOperation(swarmDeployer());
 
       for (SwarmerOperation swarmerOperation : infiniteLoopOperations.values()) {
          swarmerOperation.execute();
@@ -73,25 +86,25 @@ public class MainExecutor {
       }
    }
 
-   private InfiniteLoopOperation folderWatcher(SwarmerContext swarmerContext) {
-      return new FolderChangesWatcher(FolderChangesWatcher.OP_NAME, swarmerContext);
+   private InfiniteLoopOperation folderWatcher() {
+      return new FolderChangesWatcher(FolderChangesWatcher.OP_NAME, ctx);
    }
 
-   private InfiniteLoopOperation swarmDeployer(SwarmerContext swarmerContext) {
-      return new SwarmDeployer(SwarmDeployer.OP_NAME, swarmerContext);
+   private InfiniteLoopOperation swarmDeployer() {
+      return new SwarmDeployer(SwarmDeployer.OP_NAME, ctx);
    }
 
-   public MainExecutor startRestServer(SwarmerContext swarmerContext) {
+   public MainExecutor startRestServer() {
       if (restServer == null) {
-         restServer = restServer(swarmerContext);
+         restServer = restServer();
          restServer.execute();
       }
 
       return this;
    }
 
-   private DefaultOperation restServer(SwarmerContext swarmerContext) {
-      return new RestServerStarter(RestServerStarter.OP_NAME, swarmerContext, cliArgs);
+   private DefaultOperation restServer() {
+      return new RestServerStarter(RestServerStarter.OP_NAME, ctx, cliArgs);
    }
 
    public void waitToEnd() throws InterruptedException {
@@ -108,7 +121,11 @@ public class MainExecutor {
 
    private void gracefullyStopRestServer() {
       if (restServer != null) {
-         restServer.cleanUp();
+         try {
+            restServer.cleanUp();
+         } catch (Exception e) {
+            LOG.error("Error at cleaning up of rest server!\n{}", e);
+         }
       }
    }
 }

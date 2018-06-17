@@ -9,10 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class SwarmerCfg {
+public class SwarmerCfg implements Cloneable {
 
-   private final List<DeploymentContainerCfg> deploymentContainerCfgList;
-   private final GeneralData                  generalData;
+   private List<DeploymentContainerCfg> deploymentContainerCfgList;
+   private GeneralData                  generalData;
 
    @JsonCreator
    public SwarmerCfg(@JsonProperty("general_data") GeneralData generalData,
@@ -21,6 +21,10 @@ public class SwarmerCfg {
       this.generalData = generalData;
       this.deploymentContainerCfgList =
               deploymentContainerCfgList != null ? deploymentContainerCfgList : new ArrayList<>();
+   }
+
+   public Object clone() throws CloneNotSupportedException {
+      return super.clone();
    }
 
    public int deploymentContainerCfgsSize() {
@@ -36,24 +40,15 @@ public class SwarmerCfg {
       return generalData;
    }
 
-   @Override
-   public String toString() {
-      return "SwarmerCfg{" +
-             "deploymentContainerCfgList=" + deploymentContainerCfgList +
-             ", generalData=" + generalData +
-             '}';
-   }
-
    @JsonGetter("deployment_container_list")
    protected List<DeploymentContainerCfg> getDeploymentContainerCfgList() {
       return deploymentContainerCfgList;
    }
 
    @JsonIgnoreProperties(ignoreUnknown = true)
-   public static class GeneralData {
+   public static class GeneralData implements Cloneable {
       private final String  javaPath;
       private final Integer lockWaitTimeout;
-      private final String  serverAddress;
       private final Integer serverPort;
       private final Integer swarmDefaultStartupTime;
       private final Integer swarmPortLower;
@@ -62,7 +57,6 @@ public class SwarmerCfg {
 
       @JsonCreator
       public GeneralData(@JsonProperty("java_path") String javaPath,
-                         @JsonProperty("server_address") String serverAddress,
                          @JsonProperty("server_port") Integer serverPort,
                          @JsonProperty("lock_wait_timeout") Integer lockWaitTimeout,
                          @JsonProperty("swarm_port_lower") Integer swarmPortLower,
@@ -70,7 +64,6 @@ public class SwarmerCfg {
                          @JsonProperty("swarm_default_startup_time") Integer swarmDefaultStartupTime) {
          this.javaPath = javaPath;
          this.lockWaitTimeout = lockWaitTimeout;
-         this.serverAddress = serverAddress;
          this.serverPort = serverPort;
          this.swarmDefaultStartupTime = swarmDefaultStartupTime;
          this.swarmPortLower = swarmPortLower;
@@ -85,11 +78,6 @@ public class SwarmerCfg {
       @JsonGetter("lock_wait_timeout")
       public Integer getLockWaitTimeout() {
          return lockWaitTimeout;
-      }
-
-      @JsonGetter("server_address")
-      public String getServerAddress() {
-         return serverAddress;
       }
 
       @JsonGetter("server_port")
@@ -112,12 +100,15 @@ public class SwarmerCfg {
          return swarmPortUpper;
       }
 
+      public Object clone() throws CloneNotSupportedException {
+         return super.clone();
+      }
+
       @Override
       public String toString() {
          return "GeneralData{" +
                 "javaPath='" + javaPath + '\'' +
                 ", lockWaitTimeout=" + lockWaitTimeout +
-                ", serverAddress='" + serverAddress + '\'' +
                 ", serverPort=" + serverPort +
                 ", swarmDefaultStartupTime=" + swarmDefaultStartupTime +
                 ", swarmPortLower=" + swarmPortLower +
@@ -125,4 +116,16 @@ public class SwarmerCfg {
                 '}';
       }
    }
+
+   @Override
+   public String toString() {
+      return "SwarmerCfg{" +
+             "deploymentContainerCfgList=" + deploymentContainerCfgList +
+             ", generalData=" + generalData +
+             '}';
+   }
+
+
+
+
 }

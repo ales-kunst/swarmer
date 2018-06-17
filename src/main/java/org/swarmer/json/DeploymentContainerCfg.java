@@ -10,15 +10,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DeploymentContainerCfg {
-   private final String                   consulServiceName;
-   private final String                   consulUrl;
-   private final File                     destFolder;
-   private final String                   filePattern;
-   private final String                   jvmParams;
-   private final String                   name;
-   private final File                     srcFolder;
-   private final List<SwarmDeploymentCfg> swarmDeploymentCfgs;
+public class DeploymentContainerCfg implements Cloneable {
+   private String                   consulServiceName;
+   private String                   consulUrl;
+   private File                     destFolder;
+   private String                   filePattern;
+   private String                   jvmParams;
+   private String                   name;
+   private File                     srcFolder;
+   private List<SwarmDeploymentCfg> swarmDeploymentCfgs;
 
    public DeploymentContainerCfg(@JsonProperty("name") String name,
                                  @JsonProperty("src_folder") String srcFolder,
@@ -35,7 +35,33 @@ public class DeploymentContainerCfg {
       this.jvmParams = jvmParams;
       this.name = name;
       this.srcFolder = new File(srcFolder);
-      this.swarmDeploymentCfgs = swarmDeploymentCfgs != null ? swarmDeploymentCfgs : new ArrayList<>();
+      this.swarmDeploymentCfgs = (swarmDeploymentCfgs != null) ? swarmDeploymentCfgs : new ArrayList<>();
+   }
+
+   public void addSwarmDeploymentCfg(SwarmDeploymentCfg swarmDeploymentCfg) {
+      swarmDeploymentCfgs.add(swarmDeploymentCfg);
+   }
+
+   public void clearSwarmDeploymentList() {
+      swarmDeploymentCfgs.clear();
+   }
+
+   public Object clone() throws CloneNotSupportedException {
+      return super.clone();
+   }
+
+   @Override
+   public String toString() {
+      return "DeploymentContainerCfg{" +
+             "consulServiceName='" + consulServiceName + '\'' +
+             ", consulUrl='" + consulUrl + '\'' +
+             ", destFolder='" + destFolder + '\'' +
+             ", filePattern='" + filePattern + '\'' +
+             ", jvmParams='" + jvmParams + '\'' +
+             ", name='" + name + '\'' +
+             ", srcFolder='" + srcFolder + '\'' +
+             ", swarmDeploymentCfgs=" + swarmDeploymentCfgs +
+             '}';
    }
 
    @JsonGetter("consul_service_name")
@@ -89,20 +115,6 @@ public class DeploymentContainerCfg {
 
    public int swarmDeploymentCfgsSize() {
       return swarmDeploymentCfgs.size();
-   }
-
-   @Override
-   public String toString() {
-      return "DeploymentContainerCfg{" +
-             "consulServiceName='" + consulServiceName + '\'' +
-             ", consulUrl='" + consulUrl + '\'' +
-             ", destFolder='" + destFolder + '\'' +
-             ", filePattern='" + filePattern + '\'' +
-             ", jvmParams='" + jvmParams + '\'' +
-             ", name='" + name + '\'' +
-             ", srcFolder='" + srcFolder + '\'' +
-             ", swarmDeploymentCfgs=" + swarmDeploymentCfgs +
-             '}';
    }
 
    @JsonGetter("swarm_deployment_list")

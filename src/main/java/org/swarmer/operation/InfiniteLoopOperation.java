@@ -2,21 +2,24 @@ package org.swarmer.operation;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.swarmer.context.SwarmerCtx;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public abstract class InfiniteLoopOperation<CTX> extends SwarmerOperation<CTX> {
+public abstract class InfiniteLoopOperation extends SwarmerOperation<SwarmerCtx> {
 
    private static final Logger        LOG = LogManager.getLogger(InfiniteLoopOperation.class);
    private final        AtomicBoolean running;
-   protected            Thread        thread;
    private              long          errorCount;
+   private              Thread        thread;
 
-   public InfiniteLoopOperation(String name, CTX context) {
+   public InfiniteLoopOperation(String name, SwarmerCtx context) {
       super(name, context);
       this.errorCount = 0;
       running = new AtomicBoolean(true);
    }
+
+   public void cleanUp() { }
 
    public final void execute() {
       if (thread == null) {
@@ -29,7 +32,7 @@ public abstract class InfiniteLoopOperation<CTX> extends SwarmerOperation<CTX> {
       if (getThread() != null) {
          LOG.info("Stopping {}", name());
          stopRunning();
-         waitUntil(State.RUNNING);
+         waitUntilRunning();
          LOG.info("{} stopped", name());
       }
    }
@@ -38,20 +41,16 @@ public abstract class InfiniteLoopOperation<CTX> extends SwarmerOperation<CTX> {
       return thread;
    }
 
-   protected final void stopRunning() {
+   private void stopRunning() {
       running.set(false);
    }
 
-   private void waitUntil(State state) throws InterruptedException {
+   private void waitUntilRunning() throws InterruptedException {
       synchronized (operationsStates) {
-         while (getState() == state) {
+         while (getState() == State.RUNNING) {
             operationsStates.wait();
          }
       }
-   }
-
-   protected long getErrorCount() {
-      return errorCount;
    }
 
    private void executeLoop() {
@@ -82,7 +81,7 @@ public abstract class InfiniteLoopOperation<CTX> extends SwarmerOperation<CTX> {
 
    protected abstract void operationInitialize();
 
-   protected final boolean running() {
+   private boolean running() {
       return running.get();
    }
 

@@ -23,7 +23,7 @@ public class ConsulQuery {
       this.consulClientNew = new ConsulClient(consulUrl.getHost(), consulUrl.getPort());
    }
 
-   public Check getSwarmInstance(String serviceName, String serviceId) {
+   Check getSwarmInstance(String serviceName, String serviceId) {
       Check               resultCheck  = null;
       List<HealthService> allInstances = getAllSwarmInstances(serviceName);
       List<HealthService> result = allInstances.stream()
@@ -39,7 +39,7 @@ public class ConsulQuery {
       return resultCheck;
    }
 
-   public List<HealthService> getAllSwarmInstances(String serviceName) {
+   List<HealthService> getAllSwarmInstances(String serviceName) {
       Response<List<HealthService>> healthyServices = consulClientNew.getHealthServices(serviceName, true,
                                                                                         QueryParams.DEFAULT);
 

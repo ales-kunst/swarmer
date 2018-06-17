@@ -3,9 +3,8 @@ package org.swarmer.operation.watcher;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.swarmer.context.DeploymentContainer;
-import org.swarmer.context.SwarmFile;
-import org.swarmer.context.SwarmerContext;
+import org.swarmer.context.SwarmJob;
+import org.swarmer.context.SwarmerCtx;
 import org.swarmer.operation.InfiniteLoopOperation;
 import org.swarmer.util.FileUtil;
 import org.swarmer.util.SwarmUtil;
@@ -17,18 +16,13 @@ import java.nio.file.WatchKey;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class FolderChangesWatcher extends InfiniteLoopOperation<SwarmerContext> {
+public class FolderChangesWatcher extends InfiniteLoopOperation {
    public static final  String OP_NAME = "Folder Watcher";
    private static final Logger LOG     = LogManager.getLogger(FolderChangesWatcher.class);
-   // TODO Remove counter
-   // private              int     counter = 0;
 
-   public FolderChangesWatcher(String name, SwarmerContext context) {
+   public FolderChangesWatcher(String name, SwarmerCtx context) {
       super(name, context);
    }
-
-   @Override
-   public void cleanUp() {}
 
    @Override
    protected void operationInitialize() {
@@ -48,12 +42,6 @@ public class FolderChangesWatcher extends InfiniteLoopOperation<SwarmerContext> 
             LOG.warn("WatchKey is closed [{}].", queuedKey.toString());
          }
       }
-      // TODO Remove this code
-      /*
-      if (++counter == 10) {
-         ExceptionThrower.throwRuntimeError("Testing exception");
-      }
-      */
    }
 
    private void processWatchEvents(WatchKey queuedKey) {
@@ -133,17 +121,13 @@ public class FolderChangesWatcher extends InfiniteLoopOperation<SwarmerContext> 
          getContext().setFileSuccessfullyLocked(queuedKey);
          LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
                   srcPath.toFile().length());
-         DeploymentContainer deploymentContainer = getContext().getDeploymentContainer(queuedKey);
-         long                fileSize            = srcPath.toFile().length();
-         SwarmFile swarmFile = deploymentContainer.addSwarmFile(destPath.toFile(),
-                                                                SwarmFile.State.COPYING, fileSize);
-         try {
-            FileUtil.nioBufferCopy(srcPath.toFile(), destPath.toFile(), swarmFile.getCopyProgress());
-         } catch (Exception e) {
-            swarmFile.setState(SwarmFile.State.ERROR_COPYING, e);
-            throw e;
-         }
-         swarmFile.setState(SwarmFile.State.COPIED);
+         FileUtil.nioBufferCopy(srcPath.toFile(), destPath.toFile());
+         String containerName = getContext().getContainerName(queuedKey);
+         getContext().addSwarmJob(SwarmJob.builder()
+                                          .action(SwarmJob.Action.RUN_NEW)
+                                          .containerName(containerName)
+                                          .swarmJarFile(destPath.toFile())
+                                          .build());
       }
    }
 
@@ -160,8 +144,6 @@ public class FolderChangesWatcher extends InfiniteLoopOperation<SwarmerContext> 
    protected void handleError(Exception exception) {
       LOG.error("Exception from processWatchEvents. Continue with watch. Error stacktrace: \n {}",
                 ExceptionUtils.getStackTrace(exception));
-      // TODO Remove this code
-      // ExceptionThrower.throwRuntimeError(exception);
    }
 
    @Override

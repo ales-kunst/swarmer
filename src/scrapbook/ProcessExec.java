@@ -4,11 +4,11 @@ import java.io.InputStreamReader;
 
 class ProcessExec {
 
-   // C:\\winapp\\Java\\1.8.0_102\\X64\\JDK\\bin\\java.exe -Dfile.encoding=UTF-8 -Dswarm.bind.address=0.0.0.0 -jar D:\\programming\\java\\test-swarm-app\\target\\demo-swarm.jar
+   // C:\\winapp\\Java\\1.8.0_102\\X64\\JDK\\bin\\java.exe -Dfile.encoding=UTF-8 -Dswarm.bind.address=0.0.0.0 -jar D:\\programming\\java\\test-rest-app\\target\\demo-rest.jar
    private static String JAVA_EXE             = "C:\\winapp\\Java\\1.8.0_102\\X64\\JDK\\bin\\java.exe";
    private static String FILE_ENC_PARAM_01    = "-Dfile.encoding=UTF-8";
    private static String BINDADDRESS_PARAM_02 = "-Dswarm.bind.address=0.0.0.0";
-   private static String JAR_FILE_PARAM_03    = "-jar D:\\programming\\java\\test-swarm-app\\target\\demo-swarm.jar";
+   private static String JAR_FILE_PARAM_03    = "-jar D:\\programming\\java\\test-rest-app\\target\\demo-rest.jar";
    private static String SWARM_STARTED_TXT    = "WildFly Swarm is Ready";
 
    public static void main(String[] args) {
