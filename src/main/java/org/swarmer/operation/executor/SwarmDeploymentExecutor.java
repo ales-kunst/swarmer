@@ -20,6 +20,8 @@ class SwarmDeploymentExecutor {
 
    private static final String                 SWARM_DEPLOYMENT_COULD_NOT_BE_STOPPED =
            "Old rest deployment [WindowTitle: %s] could not be stopped! Hard killing window! Manual intervention needed!";
+   private static final int                    DEFAULT_TIMEOUT_IN_SEC                = 300;
+   private static final int                    DEFAULT_LOOP_WAIT_IN_MILLIS           = 1000;
    private final        DeploymentColor        colorToDeploy;
    private final        DeploymentColor        colorToRemove;
    private final        DeploymentContainerCfg containerCfg;
@@ -86,7 +88,7 @@ class SwarmDeploymentExecutor {
                                          colorToDeploy.toString(), copiedJarFile.getName(),
                                          port);
       String jvmArgs = containerCfg.getJvmParams();
-      String appArgs = "";
+      String appArgs = containerCfg.getAppParams();
 
       // SwarmFile swarmJarFile = deploymentContainer.findFirstSwarmFileWithState(SwarmFile.State.COPIED);
       long timeStarted = System.currentTimeMillis();
@@ -101,7 +103,8 @@ class SwarmDeploymentExecutor {
       boolean registeredSuccessful = SwarmUtil.waitForServiceRegistration(containerCfg.getConsulUrl(),
                                                                           containerCfg.getConsulServiceName(),
                                                                           serviceId,
-                                                                          300, 1000);
+                                                                          DEFAULT_TIMEOUT_IN_SEC,
+                                                                          DEFAULT_LOOP_WAIT_IN_MILLIS);
       SwarmDeployment resultDeployment = null;
       if (registeredSuccessful) {
          int pid = SwarmUtil.getSwarmPID(copiedJarFile.getName(), timeStarted);
@@ -123,7 +126,8 @@ class SwarmDeploymentExecutor {
          boolean            processSigInted = (pid != -1) && SwarmUtil.sigIntSwarm(pid);
          boolean            swarmExited     = false;
          if (processSigInted) {
-            swarmExited = SwarmUtil.waitUntilSwarmProcExits(deploymentCfg.getPid(), 300, 1000);
+            swarmExited = SwarmUtil.waitUntilSwarmProcExits(deploymentCfg.getPid(), DEFAULT_TIMEOUT_IN_SEC,
+                                                            DEFAULT_LOOP_WAIT_IN_MILLIS);
          }
          if (!swarmExited) {
             String windowTitle = deploymentCfg.getWindowTitle();

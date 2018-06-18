@@ -14,6 +14,7 @@
          "dest_folder"           : "D:\\temp\\tmp",
          "file_pattern"          : "demo-swarm.*\\.jar",
          "jvm_params"            : "-Dfile.encoding=UTF-8 -Dswarm.bind.address=127.0.0.1 -Djava.io.tmpdir=D:\\swarm_temp",
+         "app_params"            : "",
          "consul_url"            : "http://127.0.0.1:8500",
          "consul_service_name"   : "QnstMS",
          "swarm_deployment_list" : [

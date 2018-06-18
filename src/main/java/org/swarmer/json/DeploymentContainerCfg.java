@@ -16,6 +16,7 @@ public class DeploymentContainerCfg implements Cloneable {
    private File                     destFolder;
    private String                   filePattern;
    private String                   jvmParams;
+   private String                   appParams;
    private String                   name;
    private File                     srcFolder;
    private List<SwarmDeploymentCfg> swarmDeploymentCfgs;
@@ -26,6 +27,7 @@ public class DeploymentContainerCfg implements Cloneable {
                                  @JsonProperty("dest_folder") String destFolder,
                                  @JsonProperty("file_pattern") String filePattern,
                                  @JsonProperty("jvm_params") String jvmParams,
+                                 @JsonProperty("app_params") String appParams,
                                  @JsonProperty("consul_url") String consulUrl,
                                  @JsonProperty("consul_service_name") String consulServiceName,
                                  @JsonProperty("swarm_deployment_list") List<SwarmDeploymentCfg> swarmDeploymentCfgs) {
@@ -34,6 +36,7 @@ public class DeploymentContainerCfg implements Cloneable {
       this.destFolder = new File(destFolder);
       this.filePattern = filePattern;
       this.jvmParams = jvmParams;
+      this.appParams = appParams;
       this.name = name;
       this.srcFolder = new File(srcFolder);
       this.swarmDeploymentCfgs = (swarmDeploymentCfgs != null) ? swarmDeploymentCfgs : new ArrayList<>();
@@ -59,6 +62,7 @@ public class DeploymentContainerCfg implements Cloneable {
              ", destFolder='" + destFolder + '\'' +
              ", filePattern='" + filePattern + '\'' +
              ", jvmParams='" + jvmParams + '\'' +
+             ", appParams='" + appParams + '\'' +
              ", name='" + name + '\'' +
              ", srcFolder='" + srcFolder + '\'' +
              ", swarmDeploymentCfgs=" + swarmDeploymentCfgs +
@@ -94,6 +98,9 @@ public class DeploymentContainerCfg implements Cloneable {
    public String getJvmParams() {
       return jvmParams;
    }
+
+   @JsonGetter("app_params")
+   public String getAppParams() { return appParams; }
 
    @JsonGetter("name")
    public String getName() {

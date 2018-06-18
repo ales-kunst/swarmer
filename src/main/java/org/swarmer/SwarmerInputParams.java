@@ -13,7 +13,7 @@ public class SwarmerInputParams {
 
    public static String jsonAbsoluteFilePath() {
       return System.getProperty(SWARMER_CONFIG_FILE_KEY,
-                                "D:\\projects\\java\\swarmer\\src\\test\\resources\\swarmer_config.json");
+                                "swarmer_config.json");
    }
 
    public static void resetJsonAbsolutePath(String path) {
