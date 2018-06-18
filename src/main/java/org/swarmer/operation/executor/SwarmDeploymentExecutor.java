@@ -121,7 +121,11 @@ class SwarmDeploymentExecutor {
          SwarmDeploymentCfg deploymentCfg   = containerCfg.getSwarmDeploymentCfg(index);
          int                pid             = deploymentCfg.getPid();
          boolean            processSigInted = (pid != -1) && SwarmUtil.sigIntSwarm(pid);
-         if (!processSigInted) {
+         boolean            swarmExited     = false;
+         if (processSigInted) {
+            swarmExited = SwarmUtil.waitUntilSwarmProcExits(deploymentCfg.getPid(), 300, 1000);
+         }
+         if (!swarmExited) {
             String windowTitle = deploymentCfg.getWindowTitle();
             String errMsg = String.format(SWARM_DEPLOYMENT_COULD_NOT_BE_STOPPED,
                                           windowTitle);

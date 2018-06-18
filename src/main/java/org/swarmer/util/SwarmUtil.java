@@ -201,14 +201,14 @@ public class SwarmUtil {
    }
 
 
-   public static boolean waitUntilSwarmProcExits(String swarmJar, long uid, int shutdownTimeoutSeconds,
+   public static boolean waitUntilSwarmProcExits(int pid, int shutdownTimeoutSeconds,
                                                  long loopWaitMillis) {
       // TODO Refactor method waitUntilSwarmProcExits
       boolean processExited = false;
       int     timeWaited    = 0;
       while (true) {
          waitFor(loopWaitMillis);
-         if (getSwarmPID(swarmJar, uid) == -1) {
+         if (!pidExists(pid)) {
             processExited = true;
             break;
          } else if (timeWaited > shutdownTimeoutSeconds) {
@@ -231,6 +231,40 @@ public class SwarmUtil {
          LOG.error("Error executing getSwarmPID: {}", e);
       }
       return pid;
+   }
+
+   private static boolean pidExists(int pid) {
+      boolean               resultPidExists = false;
+      Future<ProcessResult> future          = null;
+      try {
+         future = new ProcessExecutor().command("jps.exe", "-mlv").readOutput(true)
+                                       .start().getFuture();
+         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
+         resultPidExists = parsePID(processResult.outputUTF8(), pid);
+      } catch (Exception e) {
+         LOG.error("Error executing getSwarmPID: {}", e);
+      }
+      return resultPidExists;
+   }
+
+   private static boolean parsePID(String content, int pid) {
+      boolean resultPIDExists = false;
+      if (content.isEmpty()) {
+         return resultPIDExists;
+      }
+
+      Scanner sc   = new Scanner(content);
+      String  line = null;
+      while (sc.hasNextLine() || (line == null)) {
+         line = sc.nextLine();
+         Scanner sc_pid = new Scanner(line);
+         if (pid == sc_pid.nextInt()) {
+            resultPIDExists = true;
+            break;
+         }
+      }
+
+      return resultPIDExists;
    }
 
    private static int parsePID(String content, String swarmJar, long uid) {
