@@ -25,13 +25,13 @@ public class SwarmDeployment implements CtxVisitableElement {
       this.windowTitle = builder.windowTitle;
    }
 
-   SwarmDeploymentCfg getSwarmerDeploymentCfg() {
-      return new SwarmDeploymentCfg(deploymentColor.value(), swarmFile.getAbsolutePath(), pid, windowTitle);
-   }
-
    @Override
    public void visit(CtxElementVisitor visitor) throws Exception {
       visitor.visit(this);
+   }
+
+   SwarmDeploymentCfg getSwarmerDeploymentCfg() {
+      return new SwarmDeploymentCfg(deploymentColor.value(), swarmFile.getAbsolutePath(), pid, windowTitle);
    }
 
    public static class Builder {

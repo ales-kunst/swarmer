@@ -74,6 +74,12 @@ public class FileUtil {
       return copyAppToTmp("/windows-kill.exe", KILL_APP_PATH);
    }
 
+   public static boolean matchesFilePattern(String fileName, String pattern) {
+      boolean matches = fileName.matches(pattern);
+      LOG.trace("Using pattern {} on filename {} [match: {}].", pattern, fileName, matches);
+      return matches;
+   }
+
    public static boolean nioBufferCopy(File source, File target) {
       boolean          isCopySuccess = false;
       FileInputStream  inStream      = null;
@@ -93,7 +99,7 @@ public class FileUtil {
          inChannel = inStream.getChannel();
          outChannel = outStream.getChannel();
 
-         ByteBuffer buffer    = ByteBuffer.allocateDirect(8192);
+         ByteBuffer buffer = ByteBuffer.allocateDirect(8192);
          while (inChannel.read(buffer) != -1) {
             buffer.flip();
             while (buffer.hasRemaining()) {
@@ -135,12 +141,6 @@ public class FileUtil {
    public static boolean winTeeAppExists() {
       File winTeeFile = new File(WIN_TEE_APP_PATH);
       return winTeeFile.exists();
-   }
-
-   public static boolean matchesFilePattern(String fileName, String pattern) {
-      boolean matches = fileName.matches(pattern);
-      LOG.trace("Using pattern {} on filename {} [match: {}].", pattern, fileName, matches);
-      return matches;
    }
 
    public static boolean windowsKillAppExists() {

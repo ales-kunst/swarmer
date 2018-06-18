@@ -40,6 +40,12 @@ public class RestServerStarter extends DefaultOperation<SwarmerCtx> {
       bootstrap.beans();
    }
 
+   @Override
+   protected void handleError(Exception exception) {
+      LOG.error("Exception from executionBlock:\n{}", ExceptionUtils.getStackTrace(exception));
+      On.setup().shutdown();
+   }
+
    private Object handleError(Req req, Resp resp, Throwable error) {
       RockerOutput errContent = Rocker.template("org/swarmer/views/err_content.rocker.html")
                                       .bind("status", "Error")
@@ -49,11 +55,5 @@ public class RestServerStarter extends DefaultOperation<SwarmerCtx> {
                                       .render();
 
       return resp.contentType(MediaType.HTML_UTF_8).result(errContent.toString()).code(500);
-   }
-
-   @Override
-   protected void handleError(Exception exception) {
-      LOG.error("Exception from executionBlock:\n{}", ExceptionUtils.getStackTrace(exception));
-      On.setup().shutdown();
    }
 }

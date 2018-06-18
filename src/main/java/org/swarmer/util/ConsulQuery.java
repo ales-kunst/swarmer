@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class ConsulQuery {
-   private final ConsulClient     consulClientNew;
+   private final ConsulClient consulClientNew;
 
    public static ConsulQuery url(String consulUrlText) throws MalformedURLException {
       URL consulUrl = new URL(consulUrlText);

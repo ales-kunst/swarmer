@@ -1,4 +1,8 @@
 <code_scheme name="AQ Code Style" version="173">
+    <JSON>
+        <option name="SPACE_BEFORE_COLON" value="true"/>
+        <option name="PROPERTY_ALIGNMENT" value="2"/>
+    </JSON>
   <JavaCodeStyleSettings>
     <option name="ANNOTATION_PARAMETER_WRAP" value="1" />
     <option name="ALIGN_MULTILINE_ANNOTATION_PARAMETERS" value="true" />
@@ -427,4 +431,9 @@
       </rules>
     </arrangement>
   </codeStyleSettings>
+    <codeStyleSettings language="JSON">
+        <indentOptions>
+            <option name="INDENT_SIZE" value="3"/>
+        </indentOptions>
+    </codeStyleSettings>
 </code_scheme>

@@ -25,7 +25,7 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
    public static final  String OP_NAME = "Folder Watcher";
    private static final Logger LOG     = LogManager.getLogger(FolderChangesWatcher.class);
 
-   private SwarmerCfg cfg;
+   private SwarmerCfg   cfg;
    private Set<Integer> succesfullyLocked;
 
    public FolderChangesWatcher(String name, SwarmerCtx context) {
@@ -36,13 +36,6 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
    @Override
    protected void operationInitialize() {
       cfg = getContext().getCfg();
-   }
-
-   private SwarmerCfg getCfg() {
-      if (cfg.getSwarmerCtxId() != getContext().getId()) {
-         cfg = getContext().getCfg();
-      }
-      return cfg;
    }
 
    @Override
@@ -112,6 +105,17 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       return watchEventFolder.resolve(watchEventFile);
    }
 
+   private SwarmerCfg getCfg() {
+      if (cfg.getSwarmerCtxId() != getContext().getId()) {
+         cfg = getContext().getCfg();
+      }
+      return cfg;
+   }
+
+   private String getContainerName(WatchKey watchKey) {
+      return findDeploymentCfg(watchKey).getName();
+   }
+
    private void processModifyEvent(WatchKey queuedKey, WatchEvent<?> watchEvent) {
       Path srcPath  = getFullPath(queuedKey, watchEvent);
       Path destPath = getDestPath(queuedKey, watchEvent);
@@ -148,6 +152,21 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       }
    }
 
+   private void clearFileSuccessfullyLocked(WatchKey watchKey) {
+      succesfullyLocked.remove(watchKey.hashCode());
+   }
+
+   private DeploymentContainerCfg findDeploymentCfg(WatchKey watchKey) {
+      for (int index = 0; index < cfg.deploymentContainerCfgsSize(); index++) {
+         DeploymentContainerCfg containerCfg = cfg.getDeploymentContainerCfg(index);
+         String                 hashCode     = Integer.toString(watchKey.hashCode());
+         if (containerCfg.getWatchKeyHash().equals(hashCode)) {
+            return containerCfg;
+         }
+      }
+      return null;
+   }
+
    private Path getDestPath(WatchKey queuedKey, WatchEvent<?> watchEvent) {
       // this is not a complete path
       Path file = (Path) watchEvent.context();
@@ -165,31 +184,8 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       return findDeploymentCfg(watchKey).getFilePattern();
    }
 
-   private String getContainerName(WatchKey watchKey) {
-      return findDeploymentCfg(watchKey).getName();
-   }
-
-   private void setFileSuccessfullyLocked(WatchKey watchKey) {
-      succesfullyLocked.add(watchKey.hashCode());
-   }
-
    private boolean isFileSuccessfullyLocked(WatchKey watchKey) {
       return succesfullyLocked.contains(watchKey.hashCode());
-   }
-
-   private void clearFileSuccessfullyLocked(WatchKey watchKey) {
-      succesfullyLocked.remove(watchKey.hashCode());
-   }
-
-   private DeploymentContainerCfg findDeploymentCfg(WatchKey watchKey) {
-      for (int index = 0; index < cfg.deploymentContainerCfgsSize(); index++) {
-         DeploymentContainerCfg containerCfg = cfg.getDeploymentContainerCfg(index);
-         String hashCode = Integer.toString(watchKey.hashCode());
-         if (containerCfg.getWatchKeyHash().equals(hashCode)) {
-            return containerCfg;
-         }
-      }
-      return null;
    }
 
    @Override
@@ -200,4 +196,8 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
 
    @Override
    protected void operationFinalize() {}
+
+   private void setFileSuccessfullyLocked(WatchKey watchKey) {
+      succesfullyLocked.add(watchKey.hashCode());
+   }
 }

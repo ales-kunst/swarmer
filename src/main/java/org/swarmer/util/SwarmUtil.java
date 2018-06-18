@@ -18,22 +18,22 @@ import java.util.function.Predicate;
 
 public class SwarmUtil {
    public static final  String UID_JVM_ARG           = "-Duid=";
+   private static final String APP_ARG_DELIMETER     = " ";
    private static final String CMD_COMMAND           = "cmd.exe";
    private static final String JAR_OPTION            = "-jar";
    private static final String JAVA_COMMAND          = "java";
+   private static final String JVM_ARG_DELIMETER     = "-D";
    private static final String JVM_SWARM_PORT_OPTION = "-Dswarm.http.port=";
-   private static final String APP_ARG_DELIMETER     = " ";
+   private static final Logger LOG                   = LogManager.getLogger(SwarmUtil.class);
    private static final String RUN_COMMAND_OPTION    = "/c";
    private static final String START_COMMAND         = "start";
    private static final String START_PATH_OPTION     = "/D";
-   private static final String JVM_ARG_DELIMETER     = "-D";
-   private static final Logger LOG                   = LogManager.getLogger(SwarmUtil.class);
 
    public static String[] createSwarmCliArguments(String windowTitle, String port, String jvmArgs, long uid,
                                                   String appArgs,
                                                   File swarmJar) {
 
-      List<String> cliArgs           = new ArrayList<>();
+      List<String> cliArgs = new ArrayList<>();
       cliArgs.add(CMD_COMMAND);
       cliArgs.add(RUN_COMMAND_OPTION);
       cliArgs.add(START_COMMAND);
@@ -234,7 +234,7 @@ public class SwarmUtil {
    }
 
    private static int parsePID(String content, String swarmJar, long uid) {
-      int     pid  = -1;
+      int pid = -1;
 
       if (content.isEmpty()) {
          return pid;

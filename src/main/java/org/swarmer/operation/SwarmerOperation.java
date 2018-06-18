@@ -29,6 +29,10 @@ public abstract class SwarmerOperation<CTX> {
 
    public abstract void execute();
 
+   protected CTX getContext() {
+      return context;
+   }
+
    State getState() {
       synchronized (operationsStates) {
          return operationsStates.get(name());
@@ -44,10 +48,6 @@ public abstract class SwarmerOperation<CTX> {
 
    public String name() {
       return name;
-   }
-
-   protected CTX getContext() {
-      return context;
    }
 
    public enum State {

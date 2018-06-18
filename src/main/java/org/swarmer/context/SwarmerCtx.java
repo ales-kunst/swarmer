@@ -18,20 +18,14 @@ import java.util.Set;
 
 public class SwarmerCtx implements Closeable, CtxVisitableElement {
    // Locking objects
-   private final Object DEPLOYMENT_CONTAINER_LOCK = new Object();
-   private final Object SWARM_JOBS_LOCK           = new Object();
-
+   private final Object                    DEPLOYMENT_CONTAINER_LOCK = new Object();
+   private final Object                    SWARM_JOBS_LOCK           = new Object();
+   private final long                      id;
    // Local vatiables
-   private List<DeploymentContainer> deploymentContainers;
-   private List<SwarmJob>            swarmJobs;
-   private SwarmerCfg.GeneralData    swarmerCfgGeneralData;
-   private WatchService              watchService;
-
-   private final long id;
-
-   SwarmerCfg.GeneralData swarmerCfgGeneralData() {
-      return swarmerCfgGeneralData;
-   }
+   private       List<DeploymentContainer> deploymentContainers;
+   private       List<SwarmJob>            swarmJobs;
+   private       SwarmerCfg.GeneralData    swarmerCfgGeneralData;
+   private       WatchService              watchService;
 
    static Builder newBuilder(SwarmerCfg swarmerCfg) {
       return new Builder(swarmerCfg);
@@ -65,20 +59,6 @@ public class SwarmerCtx implements Closeable, CtxVisitableElement {
       }
    }
 
-   public long getId() {
-      return id;
-   }
-
-   public SwarmerCfg getCfg() {
-      CfgCreator cfgCreator = new CfgCreator();
-      try {
-         visit(cfgCreator);
-      } catch (Exception e) {
-         ExceptionThrower.throwRuntimeError(e);
-      }
-      return cfgCreator.getData();
-   }
-
    private Optional<DeploymentContainer> searchDeploymentContainer(String name) {
       return deploymentContainers.stream()
                                  .filter(container ->
@@ -106,6 +86,26 @@ public class SwarmerCtx implements Closeable, CtxVisitableElement {
       }
    }
 
+   public SwarmerCfg getCfg() {
+      CfgCreator cfgCreator = new CfgCreator();
+      try {
+         visit(cfgCreator);
+      } catch (Exception e) {
+         ExceptionThrower.throwRuntimeError(e);
+      }
+      return cfgCreator.getData();
+   }
+
+   @Override
+   public void visit(CtxElementVisitor visitor) throws Exception {
+      visitor.visit(this);
+      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
+         for (DeploymentContainer container : deploymentContainers) {
+            container.visit(visitor);
+         }
+      }
+   }
+
    public DeploymentContainerCfg getDeploymentContainerCfg(String containerName) throws CloneNotSupportedException {
       DeploymentContainerCfg resultContainerCfg = null;
       synchronized (DEPLOYMENT_CONTAINER_LOCK) {
@@ -115,6 +115,10 @@ public class SwarmerCtx implements Closeable, CtxVisitableElement {
          }
       }
       return resultContainerCfg;
+   }
+
+   public long getId() {
+      return id;
    }
 
    public int getLockWaitTimeout() {
@@ -133,6 +137,10 @@ public class SwarmerCtx implements Closeable, CtxVisitableElement {
               swarmerCfgGeneralData.getSwarmPortUpper() != null ? swarmerCfgGeneralData.getSwarmPortUpper() : 10000;
 
       return new IntRange(defaultLowerPort, defaultUpperPort);
+   }
+
+   public WatchService getWatchService() {
+      return watchService;
    }
 
    public boolean isDeploymentInProgress(String containerName) {
@@ -162,10 +170,6 @@ public class SwarmerCtx implements Closeable, CtxVisitableElement {
       }
    }
 
-   public WatchService getWatchService() {
-      return watchService;
-   }
-
    public void setDeployment(String containerName, DeploymentColor color, SwarmDeployment swarmDeployment) {
       synchronized (DEPLOYMENT_CONTAINER_LOCK) {
          Optional<DeploymentContainer> result = searchDeploymentContainer(containerName);
@@ -177,14 +181,8 @@ public class SwarmerCtx implements Closeable, CtxVisitableElement {
       }
    }
 
-   @Override
-   public void visit(CtxElementVisitor visitor) throws Exception {
-      visitor.visit(this);
-      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
-         for (DeploymentContainer container : deploymentContainers) {
-            container.visit(visitor);
-         }
-      }
+   SwarmerCfg.GeneralData swarmerCfgGeneralData() {
+      return swarmerCfgGeneralData;
    }
 
    public static class Builder {
