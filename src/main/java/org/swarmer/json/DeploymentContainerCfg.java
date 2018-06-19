@@ -136,7 +136,7 @@ public class DeploymentContainerCfg implements Cloneable {
    }
 
    @JsonGetter("swarm_deployment_list")
-   protected List<SwarmDeploymentCfg> swarmDeploymentCfgList() {
+   public List<SwarmDeploymentCfg> swarmDeploymentCfgs() {
       return swarmDeploymentCfgs;
    }
 }

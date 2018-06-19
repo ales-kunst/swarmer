@@ -30,6 +30,9 @@ public class SwarmJobProcessorCreator {
          case RUN_NEW:
             resultProcessor = new NewSwarmDeployment(ctx);
             break;
+         case RUN_APPEND:
+            resultProcessor = new AppendSwarmDeployment(ctx);
+            break;
          default:
             ExceptionThrower.throwIllegalArgumentException("Illegal action " + action);
       }

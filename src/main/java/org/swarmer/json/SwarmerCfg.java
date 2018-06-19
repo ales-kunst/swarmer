@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SwarmerCfg implements Cloneable {
@@ -27,6 +28,24 @@ public class SwarmerCfg implements Cloneable {
       return super.clone();
    }
 
+   public boolean containerExists(String containerName) {
+      if (containerName == null || containerName.isEmpty()) {
+         return false;
+      }
+      return searchDeploymentContainer(containerName).isPresent();
+   }
+
+   private Optional<DeploymentContainerCfg> searchDeploymentContainer(String containerName) {
+      return containerCfgs().stream()
+                            .filter(container -> container.getName().equalsIgnoreCase(containerName))
+                            .findFirst();
+   }
+
+   @JsonGetter("deployment_container_list")
+   public List<DeploymentContainerCfg> containerCfgs() {
+      return deploymentContainerCfgList;
+   }
+
    public int deploymentContainerCfgsSize() {
       return deploymentContainerCfgList.size();
    }
@@ -40,11 +59,10 @@ public class SwarmerCfg implements Cloneable {
       return generalData;
    }
 
-   @JsonGetter("deployment_container_list")
-   public List<DeploymentContainerCfg> containerCfgs() {
-      return deploymentContainerCfgList;
+   public boolean hasContainerDeployments(String containerName) {
+      Optional<DeploymentContainerCfg> deployment = searchDeploymentContainer(containerName);
+      return deployment.isPresent() && !deployment.get().swarmDeploymentCfgs().isEmpty();
    }
-
 
    @JsonIgnoreProperties(ignoreUnknown = true)
    public static class GeneralData implements Cloneable {

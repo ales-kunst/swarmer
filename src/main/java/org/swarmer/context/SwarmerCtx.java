@@ -160,11 +160,11 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       }
    }
 
-   public void setDeployment(String containerName, DeploymentColor color, SwarmDeployment swarmDeployment) {
+   public void addDeployment(String containerName, SwarmDeployment swarmDeployment) {
       synchronized (DEPLOYMENT_CONTAINER_LOCK) {
          Optional<DeploymentContainer> result = searchDeploymentContainer(containerName);
          if (result.isPresent()) {
-            result.get().addDeployment(color, swarmDeployment);
+            result.get().addDeployment(swarmDeployment.deploymentColor(), swarmDeployment);
          } else {
             ExceptionThrower.throwIllegalArgumentException("Container " + containerName + " does not exist!");
          }

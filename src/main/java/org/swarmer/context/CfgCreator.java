@@ -33,10 +33,10 @@ public class CfgCreator implements CtxElementVisitor<SwarmerCfg> {
 
    @Override
    public void visit(SwarmDeployment deployment) {
-      SwarmDeploymentCfg deploymentCfg = new SwarmDeploymentCfg(deployment.deploymentColor.value(),
-                                                                deployment.swarmFile.getAbsolutePath(),
-                                                                deployment.pid,
-                                                                deployment.windowTitle);
+      SwarmDeploymentCfg deploymentCfg = new SwarmDeploymentCfg(deployment.deploymentColor().value(),
+                                                                deployment.swarmFile().getAbsolutePath(),
+                                                                deployment.pid(),
+                                                                deployment.windowTitle());
       getLastContainer().addSwarmDeploymentCfg(deploymentCfg);
    }
 

@@ -8,9 +8,9 @@ public class SwarmJob implements Cloneable {
    private final        String containerName;
    private final        int    instances;
    private final        int    pid;
-   private final        File   swarmJarFile;
    private final        String windowTitle;
    private              State  state;
+   private              File   swarmJarFile;
 
    public static Builder builder() {
       return new Builder();
@@ -59,6 +59,10 @@ public class SwarmJob implements Cloneable {
 
    public File getSwarmJarFile() {
       return swarmJarFile;
+   }
+
+   public void setSwarmJarFile(File swarmJarFile) {
+      this.swarmJarFile = swarmJarFile;
    }
 
    public String getWindowTitle() {

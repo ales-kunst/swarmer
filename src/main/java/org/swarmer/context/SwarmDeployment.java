@@ -5,10 +5,10 @@ import org.swarmer.json.SwarmDeploymentCfg;
 import java.io.File;
 
 public class SwarmDeployment implements CtxVisitableElement {
-   final DeploymentColor deploymentColor;
-   final int             pid;
-   final File            swarmFile;
-   final String          windowTitle;
+   private final DeploymentColor deploymentColor;
+   private final int             pid;
+   private final File            swarmFile;
+   private final String          windowTitle;
 
    public static Builder builder() {
       return new Builder();
@@ -25,9 +25,25 @@ public class SwarmDeployment implements CtxVisitableElement {
       this.windowTitle = builder.windowTitle;
    }
 
+   public DeploymentColor deploymentColor() {
+      return deploymentColor;
+   }
+
+   public int pid() {
+      return pid;
+   }
+
+   public File swarmFile() {
+      return swarmFile;
+   }
+
    @Override
    public void visit(CtxElementVisitor visitor) throws Exception {
       visitor.visit(this);
+   }
+
+   public String windowTitle() {
+      return windowTitle;
    }
 
    SwarmDeploymentCfg getSwarmerDeploymentCfg() {
