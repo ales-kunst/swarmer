@@ -8,7 +8,7 @@ import org.swarmer.context.SwarmerCtxManager;
 import org.swarmer.operation.DefaultOperation;
 import org.swarmer.operation.InfiniteLoopOperation;
 import org.swarmer.operation.SwarmerOperation;
-import org.swarmer.operation.executor.SwarmDeployer;
+import org.swarmer.operation.executor.SwarmJobExecutor;
 import org.swarmer.operation.rest.RestServerStarter;
 import org.swarmer.operation.watcher.FolderChangesWatcher;
 
@@ -52,7 +52,7 @@ public class MainExecutor {
       gracefullyStopOperations();
       infiniteLoopOperations.clear();
       try {
-         ctx.close();
+         ctx.destroy();
       } catch (Exception e) {
          LOG.error("Error at closing old swarmer context! Continuing with restarting of processes!\n{}",
                    ExceptionUtils.getStackTrace(e));
@@ -91,7 +91,7 @@ public class MainExecutor {
    }
 
    private InfiniteLoopOperation swarmDeployer() {
-      return new SwarmDeployer(SwarmDeployer.OP_NAME, ctx);
+      return new SwarmJobExecutor(SwarmJobExecutor.OP_NAME, ctx);
    }
 
    public MainExecutor startRestServer() {

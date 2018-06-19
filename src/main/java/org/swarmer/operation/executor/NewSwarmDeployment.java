@@ -15,62 +15,47 @@ import org.swarmer.util.SwarmUtil;
 import java.io.File;
 import java.io.IOException;
 
-class SwarmDeploymentExecutor {
-   private static final Logger LOG = LogManager.getLogger(SwarmDeploymentExecutor.class);
-
+class NewSwarmDeployment extends SwarmJobProcessor {
+   private static final int                    DEFAULT_LOOP_WAIT_IN_MILLIS           = 1000;
+   private static final int                    DEFAULT_TIMEOUT_IN_SEC                = 300;
+   private static final Logger                 LOG                                   = LogManager.getLogger(
+           NewSwarmDeployment.class);
    private static final String                 SWARM_DEPLOYMENT_COULD_NOT_BE_STOPPED =
            "Old rest deployment [WindowTitle: %s] could not be stopped! Hard killing window! Manual intervention needed!";
-   private static final int                    DEFAULT_TIMEOUT_IN_SEC                = 300;
-   private static final int                    DEFAULT_LOOP_WAIT_IN_MILLIS           = 1000;
-   private final        DeploymentColor        colorToDeploy;
-   private final        DeploymentColor        colorToRemove;
-   private final        DeploymentContainerCfg containerCfg;
-   private final        SwarmerCtx             ctx;
    private final        IntRange               portRange;
-   private final        SwarmJob               swarmJob;
+   private              DeploymentColor        colorToDeploy;
+   private              DeploymentColor        colorToRemove;
+   private              DeploymentContainerCfg containerCfg;
+   private              SwarmJob               swarmJob;
 
 
-   SwarmDeploymentExecutor(SwarmerCtx ctx, DeploymentContainerCfg containerCfg, SwarmJob swarmJob) {
-      this.ctx = ctx;
-      this.portRange = ctx.getPortRange();
+   NewSwarmDeployment(SwarmerCtx ctx) {
+      super(ctx);
+      this.portRange = getCtx().getPortRange();
+   }
+
+   @Override
+   public SwarmJobProcessor init(SwarmJob swarmJob) {
       this.swarmJob = swarmJob;
-      this.containerCfg = containerCfg;
+      containerCfg = getCtx().getDeploymentContainerCfg(swarmJob.getContainerName());
       colorToDeploy = colorToDeploy();
       colorToRemove = colorToRemove();
+      return this;
    }
 
-   private DeploymentColor colorToDeploy() {
-      boolean isEmptyDeploymentList = containerCfg.swarmDeploymentCfgsSize() == 0;
-      if (isEmptyDeploymentList) {
-         return DeploymentColor.BLUE;
-      }
-      final int          firstElemIndex = 0;
-      SwarmDeploymentCfg deploymentCfg  = containerCfg.getSwarmDeploymentCfg(firstElemIndex);
-      return deploymentCfg.isBlueDeployment() ? DeploymentColor.GREEN : DeploymentColor.BLUE;
-   }
-
-   private DeploymentColor colorToRemove() {
-      boolean isEmptyDeploymentList = containerCfg.swarmDeploymentCfgsSize() == 0;
-      if (isEmptyDeploymentList) {
-         return null;
-      }
-      final int          firstElemIndex = 0;
-      SwarmDeploymentCfg deploymentCfg  = containerCfg.getSwarmDeploymentCfg(firstElemIndex);
-      return deploymentCfg.getDeploymentColorEnum();
-   }
-
-   void execute() throws Exception {
+   @Override
+   public void process() throws Exception {
       int port = NetUtils.getFirstAvailablePort(portRange);
 
       if (port != -1) {
          SwarmDeployment swarmDeployment = executeSwarmProcess(port);
 
          if (swarmDeployment != null) {
-            ctx.setDeployment(swarmJob.getContainerName(), colorToDeploy, swarmDeployment);
+            getCtx().setDeployment(swarmJob.getContainerName(), colorToDeploy, swarmDeployment);
             LOG.info("Swarm started!");
             if (colorToRemove != null) {
                shutdownOldDeployment();
-               ctx.clearDeployment(swarmJob.getContainerName(), colorToRemove);
+               getCtx().clearDeployment(swarmJob.getContainerName(), colorToRemove);
             }
          } else {
             LOG.error("Swarm could not be started! See log rest file!");
@@ -142,5 +127,25 @@ class SwarmDeploymentExecutor {
 
    private String getServiceId(int port) {
       return containerCfg.getConsulServiceName() + ":127.0.0.1:" + port;
+   }
+
+   private DeploymentColor colorToDeploy() {
+      boolean isEmptyDeploymentList = containerCfg.swarmDeploymentCfgsSize() == 0;
+      if (isEmptyDeploymentList) {
+         return DeploymentColor.BLUE;
+      }
+      final int          firstElemIndex = 0;
+      SwarmDeploymentCfg deploymentCfg  = containerCfg.getSwarmDeploymentCfg(firstElemIndex);
+      return deploymentCfg.isBlueDeployment() ? DeploymentColor.GREEN : DeploymentColor.BLUE;
+   }
+
+   private DeploymentColor colorToRemove() {
+      boolean isEmptyDeploymentList = containerCfg.swarmDeploymentCfgsSize() == 0;
+      if (isEmptyDeploymentList) {
+         return null;
+      }
+      final int          firstElemIndex = 0;
+      SwarmDeploymentCfg deploymentCfg  = containerCfg.getSwarmDeploymentCfg(firstElemIndex);
+      return deploymentCfg.getDeploymentColorEnum();
    }
 }

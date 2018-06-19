@@ -1,5 +1,7 @@
 package org.swarmer.operation;
 
+import org.swarmer.context.State;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,9 +50,5 @@ public abstract class SwarmerOperation<CTX> {
 
    public String name() {
       return name;
-   }
-
-   public enum State {
-      WAITING, RUNNING, ERROR, FINISHED
    }
 }

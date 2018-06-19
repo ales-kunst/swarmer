@@ -7,20 +7,17 @@ import org.swarmer.json.DeploymentContainerCfg;
 import org.swarmer.json.SwarmerCfg;
 import org.swarmer.util.CloseableUtil;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 
-public class SwarmerCtx implements Closeable, CtxVisitableElement {
+public class SwarmerCtx implements Destroyable, CtxVisitableElement {
    // Locking objects
    private final Object                    DEPLOYMENT_CONTAINER_LOCK = new Object();
    private final Object                    SWARM_JOBS_LOCK           = new Object();
-   private final long                      id;
    // Local vatiables
    private       List<DeploymentContainer> deploymentContainers;
    private       List<SwarmJob>            swarmJobs;
@@ -36,7 +33,6 @@ public class SwarmerCtx implements Closeable, CtxVisitableElement {
       this.swarmerCfgGeneralData = builder.swarmerCfg.getGeneralData();
       this.watchService = builder.watchService;
       this.swarmJobs = new ArrayList<>();
-      id = System.currentTimeMillis();
    }
 
    public void addSwarmJob(SwarmJob swarrmJob) {
@@ -72,9 +68,9 @@ public class SwarmerCtx implements Closeable, CtxVisitableElement {
    }
 
    @Override
-   public void close() {
+   public void destroy() {
       for (DeploymentContainer container : deploymentContainers) {
-         CloseableUtil.close(container);
+         container.destroy();
       }
       CloseableUtil.close(watchService);
    }
@@ -106,24 +102,23 @@ public class SwarmerCtx implements Closeable, CtxVisitableElement {
       }
    }
 
-   public DeploymentContainerCfg getDeploymentContainerCfg(String containerName) throws CloneNotSupportedException {
+   public DeploymentContainerCfg getDeploymentContainerCfg(String containerName) {
       DeploymentContainerCfg resultContainerCfg = null;
       synchronized (DEPLOYMENT_CONTAINER_LOCK) {
          Optional<DeploymentContainer> container = searchDeploymentContainer(containerName);
          if (container.isPresent()) {
-            resultContainerCfg = container.get().getDeploymentContainerCfg();
+            try {
+               resultContainerCfg = container.get().getDeploymentContainerCfg();
+            } catch (Exception e) {
+               ExceptionThrower.throwRuntimeError(e);
+            }
          }
       }
       return resultContainerCfg;
    }
 
-   public long getId() {
-      return id;
-   }
-
    public int getLockWaitTimeout() {
       return swarmerCfgGeneralData.getLockWaitTimeout() != null ? swarmerCfgGeneralData.getLockWaitTimeout() : 3000;
-
    }
 
    public int getPort() {
@@ -154,19 +149,14 @@ public class SwarmerCtx implements Closeable, CtxVisitableElement {
       return result;
    }
 
-   public SwarmJob popSwarmJob(Set<SwarmJob.Action> validActions) {
-      if (validActions == null || validActions.isEmpty()) {
-         return null;
-      }
+   public SwarmJob popSwarmJob() {
       synchronized (SWARM_JOBS_LOCK) {
-         SwarmJob resultSwarmJob = null;
-         Optional<SwarmJob> firstElem = swarmJobs.stream().filter(sj -> validActions.contains(sj.getAction()))
-                                                 .findFirst();
-         if (firstElem.isPresent()) {
-            resultSwarmJob = firstElem.get();
-            swarmJobs.remove(resultSwarmJob);
+         if (swarmJobs.isEmpty()) {
+            return null;
          }
-         return resultSwarmJob;
+         SwarmJob resultFirstElem = swarmJobs.get(0);
+         swarmJobs.remove(resultFirstElem);
+         return resultFirstElem;
       }
    }
 

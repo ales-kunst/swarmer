@@ -9,20 +9,17 @@ import java.util.List;
 
 public class CfgCreator implements CtxElementVisitor<SwarmerCfg> {
 
-   private long                         swarmerCtxId;
    private SwarmerCfg.GeneralData       generalData;
    private List<DeploymentContainerCfg> containerCfgs;
 
    public CfgCreator() {
       generalData = null;
       containerCfgs = new ArrayList<>();
-      swarmerCtxId = -1;
    }
 
 
    @Override
    public void visit(SwarmerCtx ctx) throws CloneNotSupportedException {
-      swarmerCtxId = ctx.getId();
       generalData = (SwarmerCfg.GeneralData) ctx.swarmerCfgGeneralData().clone();
    }
 
@@ -45,7 +42,7 @@ public class CfgCreator implements CtxElementVisitor<SwarmerCfg> {
 
    @Override
    public SwarmerCfg getData() {
-      return new SwarmerCfg(generalData, containerCfgs, swarmerCtxId);
+      return new SwarmerCfg(generalData, containerCfgs);
    }
 
    private DeploymentContainerCfg getLastContainer() {

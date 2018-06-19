@@ -105,13 +105,6 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       return watchEventFolder.resolve(watchEventFile);
    }
 
-   private SwarmerCfg getCfg() {
-      if (cfg.getSwarmerCtxId() != getContext().getId()) {
-         cfg = getContext().getCfg();
-      }
-      return cfg;
-   }
-
    private String getContainerName(WatchKey watchKey) {
       return findDeploymentCfg(watchKey).getName();
    }

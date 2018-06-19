@@ -5,7 +5,6 @@ import org.swarmer.exception.ValidationException;
 import org.swarmer.json.DeploymentContainerCfg;
 import org.swarmer.json.SwarmDeploymentCfg;
 
-import java.io.Closeable;
 import java.io.File;
 import java.nio.file.WatchKey;
 import java.util.ArrayList;
@@ -13,7 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DeploymentContainer implements Closeable, CtxVisitableElement {
+public class DeploymentContainer implements Destroyable, CtxVisitableElement {
 
    // Locks
    private final Object DEPLOYMENT_IN_PROGRESS_LOCK = new Object();
@@ -53,7 +52,7 @@ public class DeploymentContainer implements Closeable, CtxVisitableElement {
    }
 
    @Override
-   public void close() {
+   public void destroy() {
       deploymentContainerCfg = null;
       watchKey.cancel();
       for (Map.Entry<DeploymentColor, List<SwarmDeployment>> entry : swarmDeployments.entrySet()) {

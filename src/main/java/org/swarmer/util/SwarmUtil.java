@@ -1,6 +1,7 @@
 package org.swarmer.util;
 
 import com.ecwid.consul.v1.health.model.Check;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -66,6 +67,20 @@ public class SwarmUtil {
       return resultArgs;
    }
 
+   public static int getSwarmPID(String swarmJar, long uid) {
+      int                   pid = -1;
+      Future<ProcessResult> future;
+      try {
+         future = new ProcessExecutor().command("jps.exe", "-mlv").readOutput(true)
+                                       .start().getFuture();
+         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
+         pid = parsePID(processResult.outputUTF8(), swarmJar, uid);
+      } catch (Exception e) {
+         LOG.error("Error executing getSwarmPID: {}", ExceptionUtils.getStackTrace(e));
+      }
+      return pid;
+   }
+
    public static boolean javaProcessStatusToolExists() {
       boolean               success = true;
       Future<ProcessResult> future  = null;
@@ -78,7 +93,7 @@ public class SwarmUtil {
             success = false;
          }
       } catch (Exception e) {
-         LOG.error("Error executing javaProcessStatusToolExists: {}", e);
+         LOG.error("Error executing javaProcessStatusToolExists: {}", ExceptionUtils.getStackTrace(e));
          success = false;
       }
       if (success) {
@@ -100,7 +115,7 @@ public class SwarmUtil {
          processResult = future.get(60, TimeUnit.SECONDS);
          LOG.info(processResult.outputUTF8());
       } catch (Exception e) {
-         LOG.error("Error executing killSwarmWindow: {}", e);
+         LOG.error("Error executing killSwarmWindow: {}", ExceptionUtils.getStackTrace(e));
       }
       if (processResult == null || processResult.getExitValue() != 0) {
          success = false;
@@ -119,21 +134,9 @@ public class SwarmUtil {
             success = true;
          }
       } catch (Exception e) {
-         LOG.error("Error executing getSwarmPID: {}", e);
+         LOG.error("Error executing getSwarmPID: {}", ExceptionUtils.getStackTrace(e));
       }
       return success;
-   }
-
-   public static Process startSwarmInstance(String... command) {
-      Process process = null;
-      try {
-         String teeLogFilename = getLogFilename(command);
-         process = new ProcessExecutor().command(command).environment("LOGFILE", teeLogFilename).readOutput(true)
-                                        .start().getProcess();
-      } catch (Exception e) {
-         LOG.error("Error executing startSwarmInstance: {}", e);
-      }
-      return process;
    }
 
    private static String getLogFilename(String[] command) {
@@ -219,30 +222,28 @@ public class SwarmUtil {
       return processExited;
    }
 
-   public static int getSwarmPID(String swarmJar, long uid) {
-      int                   pid    = -1;
-      Future<ProcessResult> future = null;
+   public static Process startSwarmInstance(String... command) {
+      Process process = null;
       try {
-         future = new ProcessExecutor().command("jps.exe", "-mlv").readOutput(true)
-                                       .start().getFuture();
-         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
-         pid = parsePID(processResult.outputUTF8(), swarmJar, uid);
+         String teeLogFilename = getLogFilename(command);
+         process = new ProcessExecutor().command(command).environment("LOGFILE", teeLogFilename).readOutput(true)
+                                        .start().getProcess();
       } catch (Exception e) {
-         LOG.error("Error executing getSwarmPID: {}", e);
+         LOG.error("Error executing startSwarmInstance: {}", ExceptionUtils.getStackTrace(e));
       }
-      return pid;
+      return process;
    }
 
    private static boolean pidExists(int pid) {
       boolean               resultPidExists = false;
-      Future<ProcessResult> future          = null;
+      Future<ProcessResult> future;
       try {
          future = new ProcessExecutor().command("jps.exe", "-mlv").readOutput(true)
                                        .start().getFuture();
          ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
          resultPidExists = parsePID(processResult.outputUTF8(), pid);
       } catch (Exception e) {
-         LOG.error("Error executing getSwarmPID: {}", e);
+         LOG.error("Error executing getSwarmPID: {}", ExceptionUtils.getStackTrace(e));
       }
       return resultPidExists;
    }

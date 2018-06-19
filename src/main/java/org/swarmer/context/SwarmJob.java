@@ -3,13 +3,14 @@ package org.swarmer.context;
 import java.io.File;
 
 public class SwarmJob implements Cloneable {
-
-   private final Action action;
-   private final String containerName;
-   private final int    instances;
-   private final int    pid;
-   private final File   swarmJarFile;
-   private final String windowTitle;
+   private static final Object LOCK_STATE = new Object();
+   private final        Action action;
+   private final        String containerName;
+   private final        int    instances;
+   private final        int    pid;
+   private final        File   swarmJarFile;
+   private final        String windowTitle;
+   private              State  state;
 
    public static Builder builder() {
       return new Builder();
@@ -22,10 +23,15 @@ public class SwarmJob implements Cloneable {
       pid = builder.pid;
       swarmJarFile = builder.swarmJarFile;
       windowTitle = builder.windowTitle;
+      state = State.WAITING;
    }
 
    public Object clone() throws CloneNotSupportedException {
       return super.clone();
+   }
+
+   public Action getAction() {
+      return action;
    }
 
    public String getContainerName() {
@@ -38,6 +44,17 @@ public class SwarmJob implements Cloneable {
 
    public int getPid() {
       return pid;
+   }
+
+   public State getState() {
+      return state;
+   }
+
+   public void setState(State state) {
+      synchronized (LOCK_STATE) {
+         this.state = state;
+         LOCK_STATE.notifyAll();
+      }
    }
 
    public File getSwarmJarFile() {
@@ -56,8 +73,17 @@ public class SwarmJob implements Cloneable {
       return action == Action.RUN_NEW;
    }
 
-   Action getAction() {
-      return action;
+   public State waitUntilFinished() {
+      while (!isFinished()) {
+         try {
+            LOCK_STATE.wait();
+         } catch (InterruptedException e) {}
+      }
+      return state;
+   }
+
+   public boolean isFinished() {
+      return (state != State.FINISHED) && (state != State.ERROR);
    }
 
    public enum Action {

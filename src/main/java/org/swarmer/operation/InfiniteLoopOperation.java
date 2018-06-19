@@ -1,7 +1,9 @@
 package org.swarmer.operation;
 
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.swarmer.context.State;
 import org.swarmer.context.SwarmerCtx;
 import org.swarmer.exception.ExceptionThrower;
 
@@ -55,7 +57,7 @@ public abstract class InfiniteLoopOperation extends SwarmerOperation<SwarmerCtx>
    }
 
    private void executeLoop() throws Exception {
-      setState(SwarmerOperation.State.RUNNING);
+      setState(State.RUNNING);
       try {
          LOG.info("Starting {}", name());
          operationInitialize();
@@ -67,14 +69,15 @@ public abstract class InfiniteLoopOperation extends SwarmerOperation<SwarmerCtx>
                try {
                   handleError(e);
                } catch (Exception otherExc) {
-                  setState(SwarmerOperation.State.ERROR);
+                  setState(State.ERROR);
                   stopRunning();
+                  LOG.error("Error from handleError method: {}", ExceptionUtils.getStackTrace(e));
                }
             }
          }
       } finally {
          if (getState() != State.ERROR) {
-            setState(SwarmerOperation.State.FINISHED);
+            setState(State.FINISHED);
          }
          operationFinalize();
       }

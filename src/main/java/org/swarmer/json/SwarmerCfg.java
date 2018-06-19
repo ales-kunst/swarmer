@@ -1,14 +1,15 @@
 package org.swarmer.json;
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SwarmerCfg implements Cloneable {
-
-   private final long swarmerCtxId;
 
    private List<DeploymentContainerCfg> deploymentContainerCfgList;
    private GeneralData                  generalData;
@@ -17,15 +18,9 @@ public class SwarmerCfg implements Cloneable {
    public SwarmerCfg(@JsonProperty("general_data") GeneralData generalData,
                      @JsonProperty(
                              "deployment_container_list") List<DeploymentContainerCfg> deploymentContainerCfgList) {
-      this(generalData, deploymentContainerCfgList, -1);
-   }
-
-   public SwarmerCfg(GeneralData generalData,
-                     List<DeploymentContainerCfg> deploymentContainerCfgList, long swarmerCtxId) {
       this.generalData = generalData;
       this.deploymentContainerCfgList =
               deploymentContainerCfgList != null ? deploymentContainerCfgList : new ArrayList<>();
-      this.swarmerCtxId = swarmerCtxId;
    }
 
    public Object clone() throws CloneNotSupportedException {
@@ -46,13 +41,8 @@ public class SwarmerCfg implements Cloneable {
    }
 
    @JsonGetter("deployment_container_list")
-   protected List<DeploymentContainerCfg> getDeploymentContainerCfgList() {
+   public List<DeploymentContainerCfg> containerCfgs() {
       return deploymentContainerCfgList;
-   }
-
-   @JsonIgnore
-   public long getSwarmerCtxId() {
-      return swarmerCtxId;
    }
 
 
