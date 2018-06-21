@@ -15,7 +15,6 @@ import java.io.IOException;
 
 public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
    protected static final int    DEFAULT_LOOP_WAIT_IN_MILLIS = 1000;
-   protected static final int    DEFAULT_TIMEOUT_IN_SEC      = 300;
    private static final   Logger LOG                         = LogManager.getLogger(SwarmDeploymentProcessor.class);
 
    // Local variables
@@ -57,11 +56,12 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
                                                                 appArgs,
                                                                 copiedJarFile);
       SwarmUtil.startSwarmInstance(swarmCommand);
-      String serviceId = getServiceId(port);
+      String serviceId      = getServiceId(port);
+      int    startupTimeout = getCtx().getGeneralCfgData().getLockWaitTimeout();
       boolean registeredSuccessful = SwarmUtil.waitForServiceRegistration(containerCfg().getConsulUrl(),
                                                                           containerCfg().getConsulServiceName(),
                                                                           serviceId,
-                                                                          DEFAULT_TIMEOUT_IN_SEC,
+                                                                          startupTimeout,
                                                                           DEFAULT_LOOP_WAIT_IN_MILLIS);
       SwarmDeployment resultDeployment = null;
       if (registeredSuccessful) {

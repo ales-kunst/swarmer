@@ -82,7 +82,8 @@ class NewSwarmDeployment extends SwarmDeploymentProcessor {
          boolean            swarmExited     = false;
          if (processSigInted) {
             LOG.info("Trying to SIGINT process with PID [{}]", pid);
-            swarmExited = SwarmUtil.waitUntilSwarmProcExits(deploymentCfg.getPid(), DEFAULT_TIMEOUT_IN_SEC,
+            int shutdownTimeout = getCtx().getGeneralCfgData().getLockWaitTimeout();
+            swarmExited = SwarmUtil.waitUntilSwarmProcExits(deploymentCfg.getPid(), shutdownTimeout,
                                                             DEFAULT_LOOP_WAIT_IN_MILLIS);
          }
          if (!swarmExited) {

@@ -1,6 +1,9 @@
 package org.swarmer.context;
 
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.lang.math.IntRange;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.swarmer.exception.ExceptionThrower;
 import org.swarmer.exception.ValidationException;
 import org.swarmer.json.DeploymentContainerCfg;
@@ -15,6 +18,8 @@ import java.util.Optional;
 
 
 public class SwarmerCtx implements Destroyable, CtxVisitableElement {
+   private static final Logger LOG = LogManager.getLogger(SwarmerCtx.class);
+
    // Locking objects
    private final Object                    DEPLOYMENT_CONTAINER_LOCK = new Object();
    private final Object                    SWARM_JOBS_LOCK           = new Object();
@@ -33,6 +38,17 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       this.swarmerCfgGeneralData = builder.swarmerCfg.getGeneralData();
       this.watchService = builder.watchService;
       this.swarmJobs = new ArrayList<>();
+   }
+
+   public void addDeployment(String containerName, SwarmDeployment swarmDeployment) {
+      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
+         Optional<DeploymentContainer> result = searchDeploymentContainer(containerName);
+         if (result.isPresent()) {
+            result.get().addDeployment(swarmDeployment.deploymentColor(), swarmDeployment);
+         } else {
+            ExceptionThrower.throwIllegalArgumentException("Container " + containerName + " does not exist!");
+         }
+      }
    }
 
    public void addSwarmJob(SwarmJob swarrmJob) {
@@ -67,19 +83,19 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       container.ifPresent(DeploymentContainer::clearDeploymentInProgress);
    }
 
+   public void deploymentInProgress(String containerName) {
+      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
+         Optional<DeploymentContainer> container = searchDeploymentContainer(containerName);
+         container.ifPresent(DeploymentContainer::deploymentInProgress);
+      }
+   }
+
    @Override
    public void destroy() {
       for (DeploymentContainer container : deploymentContainers) {
          container.destroy();
       }
       CloseableUtil.close(watchService);
-   }
-
-   public void deploymentInProgress(String containerName) {
-      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
-         Optional<DeploymentContainer> container = searchDeploymentContainer(containerName);
-         container.ifPresent(DeploymentContainer::deploymentInProgress);
-      }
    }
 
    public SwarmerCfg getCfg() {
@@ -134,6 +150,16 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       return new IntRange(defaultLowerPort, defaultUpperPort);
    }
 
+   public SwarmerCfg.GeneralData getGeneralCfgData() {
+      try {
+         SwarmerCfg.GeneralData generalData = (SwarmerCfg.GeneralData) swarmerCfgGeneralData.clone();
+         return generalData;
+      } catch (Exception e) {
+         LOG.error("Error in getGeneralCfgData: {}", ExceptionUtils.getFullStackTrace(e));
+      }
+      return null;
+   }
+
    public WatchService getWatchService() {
       return watchService;
    }
@@ -157,17 +183,6 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
          SwarmJob resultFirstElem = swarmJobs.get(0);
          swarmJobs.remove(resultFirstElem);
          return resultFirstElem;
-      }
-   }
-
-   public void addDeployment(String containerName, SwarmDeployment swarmDeployment) {
-      synchronized (DEPLOYMENT_CONTAINER_LOCK) {
-         Optional<DeploymentContainer> result = searchDeploymentContainer(containerName);
-         if (result.isPresent()) {
-            result.get().addDeployment(swarmDeployment.deploymentColor(), swarmDeployment);
-         } else {
-            ExceptionThrower.throwIllegalArgumentException("Container " + containerName + " does not exist!");
-         }
       }
    }
 
