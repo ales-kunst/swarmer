@@ -142,6 +142,7 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
                                           .containerName(containerName)
                                           .swarmJarFile(destPath.toFile())
                                           .build());
+         srcPath.toFile().delete();
       }
    }
 

@@ -109,8 +109,8 @@
   </dependencies>
 
   <build>
-    <finalName>${project.artifactId}-${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber}
-    </finalName>
+      <finalName>${project.artifactId}-${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber}
+      </finalName>
     <plugins>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -147,7 +147,7 @@
               <path>src/main/resources/info.txt</path>
               <lines>
                 <line>Swarmer v${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber} - Executes
-                  Wildfly Swarms
+                    Wildfly Swarms
                 </line>
                 <line>Implemented 2018 by Alesq</line>
               </lines>
@@ -209,10 +209,10 @@
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <manifestEntries>
                     <Main-Class>org.swarmer.Main</Main-Class>
-                    <Implementation-Title>${pom.name}</Implementation-Title>
-                    <Implementation-Version>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}
-                    </Implementation-Version>
-                    <Implementation-Vendor-Id>${pom.groupId}</Implementation-Vendor-Id>
+                      <Implementation-Title>${project.name}</Implementation-Title>
+                      <Implementation-Version>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}
+                      </Implementation-Version>
+                      <Implementation-Vendor-Id>${project.groupId}</Implementation-Vendor-Id>
                     <Implementation-Vendor>${pom.organization.name}</Implementation-Vendor>
                     <Build-Number>b${buildNumber}</Build-Number>
                   </manifestEntries>
