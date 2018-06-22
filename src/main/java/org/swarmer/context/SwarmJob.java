@@ -91,7 +91,7 @@ public class SwarmJob implements Cloneable {
    }
 
    public enum Action {
-      RUN_NEW, RUN_APPEND, KILL_INSTANCE, KILL_ALL
+      RUN_NEW, RUN_APPEND, KILL_LAST_INSTANCE
    }
 
    public static class Builder {

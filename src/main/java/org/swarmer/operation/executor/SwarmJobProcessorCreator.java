@@ -33,6 +33,9 @@ public class SwarmJobProcessorCreator {
          case RUN_APPEND:
             resultProcessor = new AppendSwarmDeployment(ctx);
             break;
+         case KILL_LAST_INSTANCE:
+            resultProcessor = new KillLastSwarmDeployment(ctx);
+            break;
          default:
             ExceptionThrower.throwIllegalArgumentException("Illegal action " + action);
       }

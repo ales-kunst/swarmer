@@ -29,14 +29,6 @@ public class DeploymentContainer implements Destroyable, CtxVisitableElement {
       initSwarmDeployment();
    }
 
-   DeploymentContainerCfg deploymentContainerCfg() {
-      return deploymentContainerCfg;
-   }
-
-   String watchKeyHash() {
-      return Integer.toString(watchKey.hashCode());
-   }
-
    private void initSwarmDeployment() {
       this.swarmDeployments = new HashMap<>();
       swarmDeployments.put(DeploymentColor.BLUE, new ArrayList<>());
@@ -61,6 +53,17 @@ public class DeploymentContainer implements Destroyable, CtxVisitableElement {
       swarmDeployments.clear();
    }
 
+   @Override
+   public void visit(CtxElementVisitor visitor) throws Exception {
+      visitor.visit(this);
+      for (Map.Entry<DeploymentColor, List<SwarmDeployment>> entry : swarmDeployments.entrySet()) {
+         List<SwarmDeployment> deployments = entry.getValue();
+         for (SwarmDeployment deployment : deployments) {
+            deployment.visit(visitor);
+         }
+      }
+   }
+
    void clearDeployment(DeploymentColor color) {
       swarmDeployments.get(color).clear();
    }
@@ -69,6 +72,20 @@ public class DeploymentContainer implements Destroyable, CtxVisitableElement {
       synchronized (DEPLOYMENT_IN_PROGRESS_LOCK) {
          this.deploymentInProgress = false;
       }
+   }
+
+   DeploymentColor currentDeploymentColor() {
+      DeploymentColor color = null;
+      if (!swarmDeployments.get(DeploymentColor.BLUE).isEmpty()) {
+         color = DeploymentColor.BLUE;
+      } else if (!swarmDeployments.get(DeploymentColor.GREEN).isEmpty()) {
+         color = DeploymentColor.GREEN;
+      }
+      return color;
+   }
+
+   DeploymentContainerCfg deploymentContainerCfg() {
+      return deploymentContainerCfg;
    }
 
    void deploymentInProgress() {
@@ -117,18 +134,24 @@ public class DeploymentContainer implements Destroyable, CtxVisitableElement {
       return deploymentContainerCfg.getDestFolder();
    }
 
+   boolean removeSwarmDeployment(DeploymentColor color, int pid) {
+      boolean               resultSuccess = false;
+      List<SwarmDeployment> deployments   = swarmDeployments.get(color);
+      for (SwarmDeployment deployment : deployments) {
+         if (deployment.pid() == pid) {
+            deployments.remove(deployment);
+            resultSuccess = true;
+            break;
+         }
+      }
+      return resultSuccess;
+   }
+
    void setWatchKey(WatchKey watchKey) {
       this.watchKey = watchKey;
    }
 
-   @Override
-   public void visit(CtxElementVisitor visitor) throws Exception {
-      visitor.visit(this);
-      for (Map.Entry<DeploymentColor, List<SwarmDeployment>> entry : swarmDeployments.entrySet()) {
-         List<SwarmDeployment> deployments = entry.getValue();
-         for (SwarmDeployment deployment : deployments) {
-            deployment.visit(visitor);
-         }
-      }
+   String watchKeyHash() {
+      return Integer.toString(watchKey.hashCode());
    }
 }

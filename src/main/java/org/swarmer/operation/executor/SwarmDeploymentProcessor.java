@@ -14,8 +14,9 @@ import java.io.File;
 import java.io.IOException;
 
 public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
-   protected static final int    DEFAULT_LOOP_WAIT_IN_MILLIS = 1000;
-   private static final   Logger LOG                         = LogManager.getLogger(SwarmDeploymentProcessor.class);
+   protected static final int    DEFAULT_LOOP_WAIT_IN_MILLIS     = 1000;
+   protected static final String DEPLOYMENT_COULD_NOT_BE_STOPPED = "Old rest deployment [WindowTitle: %s] could not be stopped! Hard killing window! Manual intervention needed!";
+   private static final   Logger LOG                             = LogManager.getLogger(SwarmDeploymentProcessor.class);
 
    // Local variables
    private final IntRange               portRange;
@@ -87,6 +88,26 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
 
    private String getServiceId(int port) {
       return containerCfg().getConsulServiceName() + ":127.0.0.1:" + port;
+   }
+
+   protected void shutdownSwarmInstance(int pid, String windowTitle) {
+      boolean processSigInted = (pid != -1) && SwarmUtil.sigIntSwarm(pid);
+      boolean swarmExited     = false;
+      if (processSigInted) {
+         LOG.info("Trying to SIGINT process with PID [{}]", pid);
+         int shutdownTimeout = getCtx().getGeneralCfgData().getLockWaitTimeout();
+         swarmExited = SwarmUtil.waitUntilSwarmProcExits(pid, shutdownTimeout,
+                                                         DEFAULT_LOOP_WAIT_IN_MILLIS);
+      }
+      if (!swarmExited) {
+         String errMsg = String.format(DEPLOYMENT_COULD_NOT_BE_STOPPED,
+                                       windowTitle);
+         LOG.error(errMsg);
+         LOG.info("Hard killing window [{}]", windowTitle);
+         SwarmUtil.killSwarmWindow(windowTitle);
+      } else {
+         LOG.info("Process with PID [{}] successfully SIGINT-ed!", pid);
+      }
    }
 
 }

@@ -8,12 +8,10 @@ import org.swarmer.context.SwarmJob;
 import org.swarmer.context.SwarmerCtx;
 import org.swarmer.json.SwarmDeploymentCfg;
 import org.swarmer.util.NetUtils;
-import org.swarmer.util.SwarmUtil;
 
 import java.io.File;
 
 class NewSwarmDeployment extends SwarmDeploymentProcessor {
-   private static final String          DEPLOYMENT_COULD_NOT_BE_STOPPED = "Old rest deployment [WindowTitle: %s] could not be stopped! Hard killing window! Manual intervention needed!";
    private static final Logger          LOG                             = LogManager.getLogger(
            NewSwarmDeployment.class);
    // Local variables
@@ -78,26 +76,10 @@ class NewSwarmDeployment extends SwarmDeploymentProcessor {
 
    private void shutdownOldDeployment() {
       for (int index = 0; index < containerCfg().swarmDeploymentCfgsSize(); index++) {
-         SwarmDeploymentCfg deploymentCfg   = containerCfg().getSwarmDeploymentCfg(index);
-         int                pid             = deploymentCfg.getPid();
-         boolean            processSigInted = (pid != -1) && SwarmUtil.sigIntSwarm(pid);
-         boolean            swarmExited     = false;
-         if (processSigInted) {
-            LOG.info("Trying to SIGINT process with PID [{}]", pid);
-            int shutdownTimeout = getCtx().getGeneralCfgData().getLockWaitTimeout();
-            swarmExited = SwarmUtil.waitUntilSwarmProcExits(deploymentCfg.getPid(), shutdownTimeout,
-                                                            DEFAULT_LOOP_WAIT_IN_MILLIS);
-         }
-         if (!swarmExited) {
-            String windowTitle = deploymentCfg.getWindowTitle();
-            String errMsg = String.format(DEPLOYMENT_COULD_NOT_BE_STOPPED,
-                                          windowTitle);
-            LOG.error(errMsg);
-            LOG.info("Trying hard killing window [{}]", windowTitle);
-            SwarmUtil.killSwarmWindow(windowTitle);
-         } else {
-            LOG.info("Process with PID [{}] successfully SIGINT-ed!", pid);
-         }
+         SwarmDeploymentCfg deploymentCfg = containerCfg().getSwarmDeploymentCfg(index);
+         int                pid           = deploymentCfg.getPid();
+         String             windowTitle   = deploymentCfg.getWindowTitle();
+         shutdownSwarmInstance(pid, windowTitle);
          File fileToRemove = new File(deploymentCfg.getSwarmFilePath());
          if (fileToRemove.exists()) {
             fileToRemove.delete();

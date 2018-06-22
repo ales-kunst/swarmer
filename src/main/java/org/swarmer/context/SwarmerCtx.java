@@ -60,6 +60,18 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       }
    }
 
+   public boolean removeDeployment(String containerName, int pid) {
+      boolean                       resultSuccess = false;
+      Optional<DeploymentContainer> container     = searchDeploymentContainer(containerName);
+      if (container.isPresent()) {
+         DeploymentColor color = container.get().currentDeploymentColor();
+         if (color != null) {
+            resultSuccess = container.get().removeSwarmDeployment(color, pid);
+         }
+      }
+      return resultSuccess;
+   }
+
    public void clearDeployment(String containerName, DeploymentColor color) {
       synchronized (DEPLOYMENT_CONTAINER_LOCK) {
          Optional<DeploymentContainer> result = searchDeploymentContainer(containerName);
