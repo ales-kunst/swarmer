@@ -22,6 +22,9 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <failOnMissingWebXml>false</failOnMissingWebXml>
+    <swarmer.version.number>
+      ${project.artifactId}-${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber}
+    </swarmer.version.number>
   </properties>
 
   <dependencyManagement>
@@ -109,8 +112,8 @@
   </dependencies>
 
   <build>
-      <finalName>${project.artifactId}-${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber}
-      </finalName>
+    <!-- <finalName>${project.artifactId}-${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber}</finalName> -->
+    <finalName>swarmer</finalName>
     <plugins>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -146,16 +149,23 @@
             <file>
               <path>src/main/resources/info.txt</path>
               <lines>
-                <line>Swarmer v${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber} - Executes
-                    Wildfly Swarms
-                </line>
+                <line>Swarmer v${swarmer.version.number} - Executes Wildfly Swarms</line>
                 <line>Implemented 2018 by Alesq</line>
               </lines>
             </file>
             <file>
               <path>src/main/resources/version.txt</path>
               <lines>
-                <line>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber}</line>
+                <line>${swarmer.version.number}</line>
+              </lines>
+            </file>
+            <file>
+              <path>target/start_swarmer.cmd</path>
+              <lines>
+                <line>set PATH=Path to Java bin;%PATH%</line>
+                <line>java -Dswarmer.configuration.file="Absolute path to swarmer config file" -jar
+                  ${project.build.finalName}
+                </line>
               </lines>
             </file>
           </files>
@@ -209,10 +219,10 @@
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <manifestEntries>
                     <Main-Class>org.swarmer.Main</Main-Class>
-                      <Implementation-Title>${project.name}</Implementation-Title>
-                      <Implementation-Version>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}
-                      </Implementation-Version>
-                      <Implementation-Vendor-Id>${project.groupId}</Implementation-Vendor-Id>
+                    <Implementation-Title>${project.name}</Implementation-Title>
+                    <Implementation-Version>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}
+                    </Implementation-Version>
+                    <Implementation-Vendor-Id>${project.groupId}</Implementation-Vendor-Id>
                     <Implementation-Vendor>${pom.organization.name}</Implementation-Vendor>
                     <Build-Number>b${buildNumber}</Build-Number>
                   </manifestEntries>
@@ -221,6 +231,23 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.5.3</version>
+        <executions>
+          <execution>
+            <id>create-archive</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <descriptor>src/assembly/build_zip.xml</descriptor>
+        </configuration>
       </plugin>
 
       <plugin>
