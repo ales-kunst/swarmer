@@ -4,11 +4,18 @@
 
   <groupId>org.alesq</groupId>
   <artifactId>swarmer</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>swarmer</name>
-  <url>http://maven.apache.org</url>
+  <url>https://bitbucket.org/ales_kunst/swarmer.git</url>
+
+  <scm>
+    <connection>scm:git:https://bitbucket.org/ales_kunst/swarmer.git</connection>
+    <developerConnection>scm:git:https://bitbucket.org/ales_kunst/swarmer.git</developerConnection>
+    <tag>HEAD</tag>
+    <url>https://bitbucket.org/ales_kunst/swarmer.git</url>
+  </scm>
 
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
@@ -102,8 +109,59 @@
   </dependencies>
 
   <build>
-    <finalName>uber-swarmer</finalName>
+    <finalName>${project.artifactId}-${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber}
+    </finalName>
     <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.5</version>
+        <executions>
+          <execution>
+            <id>parse-version</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>parse-version</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>ru.yaal.maven</groupId>
+        <artifactId>write-text-files-maven-plugin</artifactId>
+        <version>1.1</version>
+        <executions>
+          <execution>
+            <id>write-text-files</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>write-text-files</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <charset>UTF-8</charset>
+          <files>
+            <file>
+              <path>src/main/resources/info.txt</path>
+              <lines>
+                <line>Swarmer v${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber} - Executes
+                  Wildfly Swarms
+                </line>
+                <line>Implemented 2018 by Alesq</line>
+              </lines>
+            </file>
+            <file>
+              <path>src/main/resources/version.txt</path>
+              <lines>
+                <line>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber}</line>
+              </lines>
+            </file>
+          </files>
+        </configuration>
+      </plugin>
+
       <plugin>
         <groupId>com.github.ekryd.sortpom</groupId>
         <artifactId>sortpom-maven-plugin</artifactId>
@@ -151,13 +209,42 @@
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <manifestEntries>
                     <Main-Class>org.swarmer.Main</Main-Class>
-                    <Build-Number>1</Build-Number>
+                    <Implementation-Title>${pom.name}</Implementation-Title>
+                    <Implementation-Version>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}
+                    </Implementation-Version>
+                    <Implementation-Vendor-Id>${pom.groupId}</Implementation-Vendor-Id>
+                    <Implementation-Vendor>${pom.organization.name}</Implementation-Vendor>
+                    <Build-Number>b${buildNumber}</Build-Number>
                   </manifestEntries>
                 </transformer>
               </transformers>
             </configuration>
           </execution>
         </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+        <version>1.4</version>
+        <executions>
+          <execution>
+            <id>buildnumber</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>create</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <format>{0,number}</format>
+          <items>
+            <item>buildNumber</item>
+          </items>
+          <doCheck>false</doCheck>
+          <doUpdate>false</doUpdate>
+          <revisionOnScmFailure>NaN</revisionOnScmFailure>
+        </configuration>
       </plugin>
     </plugins>
   </build>

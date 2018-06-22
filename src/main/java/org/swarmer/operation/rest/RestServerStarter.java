@@ -2,6 +2,7 @@ package org.swarmer.operation.rest;
 
 import com.fizzed.rocker.Rocker;
 import com.fizzed.rocker.RockerOutput;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,6 +15,11 @@ import org.rapidoid.setup.My;
 import org.rapidoid.setup.On;
 import org.swarmer.context.SwarmerCtx;
 import org.swarmer.operation.DefaultOperation;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 
 public class RestServerStarter extends DefaultOperation<SwarmerCtx> {
    public static final  String   OP_NAME = "REST Server";
@@ -37,7 +43,19 @@ public class RestServerStarter extends DefaultOperation<SwarmerCtx> {
       int port = getContext().getPort();
       On.address("0.0.0.0").port(port);
       My.errorHandler(this::handleError);
+      On.get("/version").json(this::getVersionInfo);
       bootstrap.beans();
+   }
+
+   private String getVersionInfo() {
+      String      resultText = "";
+      InputStream inStream   = RestServerStarter.class.getResourceAsStream("/version.txt");
+      try {
+         StringWriter writer = new StringWriter();
+         IOUtils.copy(inStream, writer, StandardCharsets.UTF_8);
+         resultText = writer.toString();
+      } catch (IOException e) {}
+      return resultText.trim();
    }
 
    @Override
