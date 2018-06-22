@@ -10,6 +10,8 @@ import org.swarmer.json.SwarmDeploymentCfg;
 import org.swarmer.util.NetUtils;
 import org.swarmer.util.SwarmUtil;
 
+import java.io.File;
+
 class NewSwarmDeployment extends SwarmDeploymentProcessor {
    private static final String          DEPLOYMENT_COULD_NOT_BE_STOPPED = "Old rest deployment [WindowTitle: %s] could not be stopped! Hard killing window! Manual intervention needed!";
    private static final Logger          LOG                             = LogManager.getLogger(
@@ -95,6 +97,10 @@ class NewSwarmDeployment extends SwarmDeploymentProcessor {
             SwarmUtil.killSwarmWindow(windowTitle);
          } else {
             LOG.info("Process with PID [{}] successfully SIGINT-ed!", pid);
+         }
+         File fileToRemove = new File(deploymentCfg.getSwarmFilePath());
+         if (fileToRemove.exists()) {
+            fileToRemove.delete();
          }
       }
    }
