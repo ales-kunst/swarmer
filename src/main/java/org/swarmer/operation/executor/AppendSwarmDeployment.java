@@ -2,8 +2,8 @@ package org.swarmer.operation.executor;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.context.DeploymentColor;
 import org.swarmer.context.SwarmDeployment;
 import org.swarmer.context.SwarmJob;
@@ -14,7 +14,7 @@ import org.swarmer.util.NetUtils;
 import java.io.File;
 
 public class AppendSwarmDeployment extends SwarmDeploymentProcessor {
-   private static final Logger          LOG = LogManager.getLogger(AppendSwarmDeployment.class);
+   private static final Logger          LOG = LoggerFactory.getLogger(AppendSwarmDeployment.class);
    private              DeploymentColor colorToDeploy;
 
    public AppendSwarmDeployment(SwarmerCtx ctx) {
@@ -38,7 +38,7 @@ public class AppendSwarmDeployment extends SwarmDeploymentProcessor {
    }
 
    @Override
-   public void process() throws Exception {
+   public void processImpl() throws Exception {
       if (containerCfg().swarmDeploymentCfgs().isEmpty()) {
          return;
       }

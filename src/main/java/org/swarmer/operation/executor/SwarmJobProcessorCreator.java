@@ -28,7 +28,7 @@ public class SwarmJobProcessorCreator {
       SwarmJobProcessor resultProcessor = null;
       switch (action) {
          case RUN_NEW:
-            resultProcessor = new NewSwarmDeployment(ctx);
+            resultProcessor = new SwarmDeployment(ctx);
             break;
          case RUN_APPEND:
             resultProcessor = new AppendSwarmDeployment(ctx);

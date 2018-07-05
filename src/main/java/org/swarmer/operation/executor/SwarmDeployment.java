@@ -1,9 +1,8 @@
 package org.swarmer.operation.executor;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.context.DeploymentColor;
-import org.swarmer.context.SwarmDeployment;
 import org.swarmer.context.SwarmJob;
 import org.swarmer.context.SwarmerCtx;
 import org.swarmer.json.SwarmDeploymentCfg;
@@ -11,15 +10,15 @@ import org.swarmer.util.NetUtils;
 
 import java.io.File;
 
-class NewSwarmDeployment extends SwarmDeploymentProcessor {
-   private static final Logger          LOG                             = LogManager.getLogger(
-           NewSwarmDeployment.class);
+class SwarmDeployment extends SwarmDeploymentProcessor {
+   private static final Logger          LOG = LoggerFactory.getLogger(
+           SwarmDeployment.class);
    // Local variables
    private              DeploymentColor colorToDeploy;
    private              DeploymentColor colorToRemove;
 
 
-   NewSwarmDeployment(SwarmerCtx ctx) {
+   SwarmDeployment(SwarmerCtx ctx) {
       super(ctx);
    }
 
@@ -52,11 +51,11 @@ class NewSwarmDeployment extends SwarmDeploymentProcessor {
    }
 
    @Override
-   public void process() throws Exception {
+   public void processImpl() throws Exception {
       int port = NetUtils.getFirstAvailablePort(portRange());
 
       if (port != -1) {
-         SwarmDeployment swarmDeployment = startSwarmJar(port, colorToDeploy);
+         org.swarmer.context.SwarmDeployment swarmDeployment = startSwarmJar(port, colorToDeploy);
 
          if (swarmDeployment != null) {
             getCtx().addDeployment(swarmJob().getContainerName(), swarmDeployment);
@@ -66,11 +65,11 @@ class NewSwarmDeployment extends SwarmDeploymentProcessor {
                getCtx().clearDeployment(swarmJob().getContainerName(), colorToRemove);
             }
          } else {
-            LOG.error("Swarm could not be started! See log rest file!");
+            LOG.warn("Swarm could not be started! See log rest file!");
          }
       } else {
          String errMsg = String.format("No available ports in the range %s", portRange().toString());
-         LOG.error(errMsg);
+         LOG.warn(errMsg);
       }
    }
 
@@ -82,6 +81,7 @@ class NewSwarmDeployment extends SwarmDeploymentProcessor {
          shutdownSwarmInstance(pid, windowTitle);
          File fileToRemove = new File(deploymentCfg.getSwarmFilePath());
          if (fileToRemove.exists()) {
+            LOG.info("Removing of old deployment swarm file [{}].", fileToRemove.getAbsolutePath());
             fileToRemove.delete();
          }
       }

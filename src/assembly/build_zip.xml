@@ -10,7 +10,7 @@
             <directory>${project.build.directory}</directory>
             <outputDirectory></outputDirectory>
             <includes>
-                <include>swarmer.jar</include>
+                <include>swarmer-*.jar</include>
                 <include>start_swarmer.cmd</include>
             </includes>
         </fileSet>
@@ -26,6 +26,14 @@
             <outputDirectory>conf</outputDirectory>
             <includes>
                 <include>swarmer_config.json</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/main/db</directory>
+            <outputDirectory>logs</outputDirectory>
+            <includes>
+                <include>log_db.properties</include>
+                <include>log_db.script</include>
             </includes>
         </fileSet>
     </fileSets>

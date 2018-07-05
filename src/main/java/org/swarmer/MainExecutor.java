@@ -1,8 +1,8 @@
 package org.swarmer;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.context.SwarmerCtx;
 import org.swarmer.context.SwarmerCtxManager;
 import org.swarmer.operation.DefaultOperation;
@@ -11,20 +11,22 @@ import org.swarmer.operation.SwarmerOperation;
 import org.swarmer.operation.executor.SwarmJobExecutor;
 import org.swarmer.operation.rest.RestServerStarter;
 import org.swarmer.operation.watcher.FolderChangesWatcher;
+import org.swarmer.util.FileUtil;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MainExecutor {
-   private static final Logger                             LOG = LogManager.getLogger(MainExecutor.class);
+   private static final Logger                             LOG = LoggerFactory.getLogger(MainExecutor.class);
    private static       SwarmerCtx                         ctx;
    private static       MainExecutor                       instance;
    private              String[]                           cliArgs;
    private              Map<String, InfiniteLoopOperation> infiniteLoopOperations;
    private              DefaultOperation                   restServer;
 
-   public static MainExecutor cliArgs(String[] cliArgs) {
-      return instance(cliArgs);
+   public static Initializer cliArgs(String[] cliArgs) {
+      return new Initializer(instance(cliArgs));
    }
 
    private static MainExecutor instance(String[] cliArgs) {
@@ -126,6 +128,22 @@ public class MainExecutor {
          } catch (Exception e) {
             LOG.error("Error at cleaning up of rest server!\n{}", e);
          }
+      }
+   }
+
+   public static class Initializer {
+      private final MainExecutor executor;
+
+      private Initializer(MainExecutor executor) {
+         this.executor = executor;
+      }
+
+      public MainExecutor initialize() {
+         new File(FileUtil.KILL_APP_PATH).delete();
+         new File(FileUtil.WIN_TEE_APP_PATH).delete();
+         FileUtil.copyWindowsKillAppToTmp();
+         FileUtil.copyWinTeeAppToTmp();
+         return executor;
       }
    }
 }

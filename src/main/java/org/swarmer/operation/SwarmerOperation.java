@@ -5,7 +5,7 @@ import org.swarmer.context.State;
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class SwarmerOperation<CTX> {
+public abstract class SwarmerOperation<CTX, RT> {
    public static final Map<String, State> operationsStates = new HashMap<>();
    protected final     CTX                context;
    private             String             name;
@@ -29,7 +29,7 @@ public abstract class SwarmerOperation<CTX> {
 
    public abstract void cleanUp() throws Exception;
 
-   public abstract void execute();
+   public abstract RT execute();
 
    protected CTX getContext() {
       return context;

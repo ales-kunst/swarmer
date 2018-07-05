@@ -1,40 +1,28 @@
 package org.swarmer.operation.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.io.FileUtils;
 import org.rapidoid.annotation.Controller;
 import org.rapidoid.annotation.GET;
 import org.rapidoid.annotation.Param;
 import org.swarmer.MainExecutor;
-import org.swarmer.SwarmerInputParams;
+import org.swarmer.context.SwarmerCtx;
 import org.swarmer.context.SwarmerCtxManager;
 import org.swarmer.exception.ExceptionThrower;
 import org.swarmer.json.SwarmerCfg;
+import org.swarmer.operation.SaveCtxStateToFile;
+import org.swarmer.util.SwarmerInputParams;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 
 @Controller("/config")
 public class ConfigRestEndpoint {
-   private static final ObjectMapper JSON_MAPPER        = new ObjectMapper();
-   private static final Object       RELOAD_CONFIG_LOCK = new Object();
+   private static final Object RELOAD_CONFIG_LOCK = new Object();
 
    @GET("/dump")
-   public String dumpConfigToFile(@Param("file") String file) throws Exception {
-      SwarmerCfg cfgObj   = SwarmerCtxManager.instance().getCtxCfg();
-      String     filename = file != null ? file : "config_dump_" + System.currentTimeMillis() + ".json";
-      File       cfgFile  = getConfigFile(filename);
-
-      String json = JSON_MAPPER.writeValueAsString(cfgObj);
-
-      FileUtils.write(cfgFile, json, StandardCharsets.UTF_8.name());
+   public String dumpConfigToFile(@Param("file") String file) {
+      SwarmerCtx ctx     = SwarmerCtxManager.instance().getCtx();
+      File       cfgFile = new SaveCtxStateToFile(file, ctx).execute();
 
       return String.format("OK [%s]", cfgFile.getAbsolutePath());
-   }
-
-   private File getConfigFile(String file) {
-      File cfgDir = SwarmerInputParams.getJsonFileFolder();
-      return new File(cfgDir, file);
    }
 
    @GET("/path")
@@ -49,8 +37,9 @@ public class ConfigRestEndpoint {
 
    @GET("/reload")
    public String reloadConfig(@Param("file") String file) throws Exception {
+      // This must be synchronized because we can not call this method concurrently
       synchronized (RELOAD_CONFIG_LOCK) {
-         File cfgFile = getConfigFile(file);
+         File cfgFile = SwarmerInputParams.getConfigFile(file);
          if (!cfgFile.exists()) {
             String msg = String.format("ERROR: File [%s] does not exist!" + cfgFile.getAbsolutePath());
             ExceptionThrower.throwIllegalArgumentException(msg);

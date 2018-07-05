@@ -1,11 +1,11 @@
 package org.swarmer.util;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.context.SwarmerCtx;
 
 import java.io.File;
@@ -13,7 +13,7 @@ import java.io.IOException;
 
 public class SwarmUtilTest {
    private static final int    DEFAULT_SWARM_STARTUP_TIME = 300;
-   private static final Logger LOG                        = LogManager.getLogger(SwarmerCtx.class);
+   private static final Logger LOG                        = LoggerFactory.getLogger(SwarmerCtx.class);
    private static final String TMP_FOLDER                 = System.getProperty("java.io.tmpdir");
    private static final String CONSUL_EXEC_PATH           = TMP_FOLDER + "\\consul.exe";
 
@@ -73,7 +73,7 @@ public class SwarmUtilTest {
    @Test
    public void testGetSwarmPID() throws IOException {
       long uid = startSwarm();
-      int  pid = SwarmUtil.getSwarmPID("demo-rest.jar", uid);
+      int  pid = SwarmUtil.getSwarmPid("demo-rest.jar", uid);
       Assert.assertTrue(pid != -1);
       FileUtil.copyWindowsKillAppToTmp();
       SwarmUtil.sigIntSwarm(pid);
@@ -110,7 +110,7 @@ public class SwarmUtilTest {
    private void waitSwarmToShutDown(String swarmJar, long uid) {
       int timeWaited = 0;
       while (SwarmUtil.waitFor(1000)) {
-         int     pid                 = SwarmUtil.getSwarmPID(swarmJar, uid);
+         int     pid                 = SwarmUtil.getSwarmPid(swarmJar, uid);
          boolean successfuleShutdown = (pid == -1);
          if (successfuleShutdown) {
             break;

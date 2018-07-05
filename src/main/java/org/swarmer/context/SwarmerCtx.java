@@ -2,8 +2,8 @@ package org.swarmer.context;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.lang.math.IntRange;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.exception.ExceptionThrower;
 import org.swarmer.exception.ValidationException;
 import org.swarmer.json.DeploymentContainerCfg;
@@ -18,7 +18,7 @@ import java.util.Optional;
 
 
 public class SwarmerCtx implements Destroyable, CtxVisitableElement {
-   private static final Logger LOG = LogManager.getLogger(SwarmerCtx.class);
+   private static final Logger LOG = LoggerFactory.getLogger(SwarmerCtx.class);
 
    // Locking objects
    private final Object                    DEPLOYMENT_CONTAINER_LOCK = new Object();
@@ -51,6 +51,16 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       }
    }
 
+   public SwarmerCfg.GeneralData getGeneralCfgData() {
+      try {
+         SwarmerCfg.GeneralData generalData = (SwarmerCfg.GeneralData) swarmerCfgGeneralData.clone();
+         return generalData;
+      } catch (Exception e) {
+         LOG.error("Error in getGeneralCfgData: {}", ExceptionUtils.getFullStackTrace(e));
+      }
+      return null;
+   }
+
    public void addSwarmJob(SwarmJob swarrmJob) {
       if ((swarrmJob == null) || (swarrmJob.getAction() == null)) {
          ExceptionThrower.throwIllegalArgumentException("Action can not be null!");
@@ -58,18 +68,6 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       synchronized (SWARM_JOBS_LOCK) {
          swarmJobs.add(swarrmJob);
       }
-   }
-
-   public boolean removeDeployment(String containerName, int pid) {
-      boolean                       resultSuccess = false;
-      Optional<DeploymentContainer> container     = searchDeploymentContainer(containerName);
-      if (container.isPresent()) {
-         DeploymentColor color = container.get().currentDeploymentColor();
-         if (color != null) {
-            resultSuccess = container.get().removeSwarmDeployment(color, pid);
-         }
-      }
-      return resultSuccess;
    }
 
    public void clearDeployment(String containerName, DeploymentColor color) {
@@ -81,13 +79,6 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
             ExceptionThrower.throwIllegalArgumentException("Container " + containerName + " does not exist!");
          }
       }
-   }
-
-   private Optional<DeploymentContainer> searchDeploymentContainer(String name) {
-      return deploymentContainers.stream()
-                                 .filter(container ->
-                                                 container.deploymentContainerCfg().getName().equalsIgnoreCase(name))
-                                 .findFirst();
    }
 
    public void clearDeploymentInProgress(String containerName) {
@@ -145,6 +136,18 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       return resultContainerCfg;
    }
 
+   public boolean removeDeployment(String containerName, int pid) {
+      boolean                       resultSuccess = false;
+      Optional<DeploymentContainer> container     = searchDeploymentContainer(containerName);
+      if (container.isPresent()) {
+         DeploymentColor color = container.get().currentDeploymentColor();
+         if (color != null) {
+            resultSuccess = container.get().removeSwarmDeployment(color, pid);
+         }
+      }
+      return resultSuccess;
+   }
+
    public int getLockWaitTimeout() {
       return swarmerCfgGeneralData.getLockWaitTimeout() != null ? swarmerCfgGeneralData.getLockWaitTimeout() : 3000;
    }
@@ -160,16 +163,6 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
               swarmerCfgGeneralData.getSwarmPortUpper() != null ? swarmerCfgGeneralData.getSwarmPortUpper() : 10000;
 
       return new IntRange(defaultLowerPort, defaultUpperPort);
-   }
-
-   public SwarmerCfg.GeneralData getGeneralCfgData() {
-      try {
-         SwarmerCfg.GeneralData generalData = (SwarmerCfg.GeneralData) swarmerCfgGeneralData.clone();
-         return generalData;
-      } catch (Exception e) {
-         LOG.error("Error in getGeneralCfgData: {}", ExceptionUtils.getFullStackTrace(e));
-      }
-      return null;
    }
 
    public WatchService getWatchService() {
@@ -196,6 +189,13 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
          swarmJobs.remove(resultFirstElem);
          return resultFirstElem;
       }
+   }
+
+   private Optional<DeploymentContainer> searchDeploymentContainer(String name) {
+      return deploymentContainers.stream()
+                                 .filter(container ->
+                                                 container.deploymentContainerCfg().getName().equalsIgnoreCase(name))
+                                 .findFirst();
    }
 
    SwarmerCfg.GeneralData swarmerCfgGeneralData() {

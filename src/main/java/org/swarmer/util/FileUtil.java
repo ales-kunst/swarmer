@@ -1,7 +1,7 @@
 package org.swarmer.util;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -16,7 +16,7 @@ public class FileUtil {
 
    public static final  String KILL_APP_PATH    = System.getProperty("java.io.tmpdir") + "\\windows-kill.exe";
    public static final  String WIN_TEE_APP_PATH = System.getProperty("java.io.tmpdir") + "\\wintee.exe";
-   private static final Logger LOG              = LogManager.getLogger(FileUtil.class);
+   private static final Logger LOG              = LoggerFactory.getLogger(FileUtil.class);
 
    public static boolean canObtainExclusiveLock(Path source) {
       boolean canObtainExclusiveLock = false;
@@ -49,6 +49,10 @@ public class FileUtil {
       return copyAppToTmp("/wintee.exe", WIN_TEE_APP_PATH);
    }
 
+   public static boolean copyWindowsKillAppToTmp() {
+      return copyAppToTmp("/windows-kill.exe", KILL_APP_PATH);
+   }
+
    private static boolean copyAppToTmp(String resourcePath, String targetpath) {
       boolean      success   = true;
       InputStream  inStream  = null;
@@ -62,7 +66,7 @@ public class FileUtil {
             outStream.write(buffer, 0, length);
          }
       } catch (Exception e) {
-         LOG.error("Error executing copyAppToTmp: {}", e);
+         LOG.debug("Error executing copyAppToTmp: {}", e);
          success = false;
       }
       CloseableUtil.close(inStream);
@@ -70,13 +74,9 @@ public class FileUtil {
       return success;
    }
 
-   public static boolean copyWindowsKillAppToTmp() {
-      return copyAppToTmp("/windows-kill.exe", KILL_APP_PATH);
-   }
-
    public static boolean matchesFilePattern(String fileName, String pattern) {
       boolean matches = fileName.matches(pattern);
-      LOG.trace("Using pattern {} on filename {} [match: {}].", pattern, fileName, matches);
+      LOG.debug("Using pattern {} on filename {} [match: {}].", pattern, fileName, matches);
       return matches;
    }
 
@@ -93,7 +93,7 @@ public class FileUtil {
       }
 
       try {
-         LOG.info("*** Started copying file [{} -> {}] ***", source.getAbsolutePath(), target.getAbsolutePath());
+         LOG.info("|---> Started copying file [{} -> {}]", source.getAbsolutePath(), target.getAbsolutePath());
          inStream = new FileInputStream(source);
          outStream = new FileOutputStream(target);
          inChannel = inStream.getChannel();
@@ -107,11 +107,11 @@ public class FileUtil {
             }
             buffer.clear();
          }
-         LOG.info("*** Ended copying file [{} -> {}] ***", source.getAbsolutePath(), target.getAbsolutePath());
+         LOG.info("--->| Ended copying file [{} -> {}]", source.getAbsolutePath(), target.getAbsolutePath());
          isCopySuccess = true;
       } catch (IOException e) {
-         LOG.error("Error at nioBufferCopy when copying file [{} -> {}]: ", source.getAbsolutePath(),
-                   target.getAbsolutePath(), e);
+         LOG.warn("Error at nioBufferCopy when copying file [{} -> {}]: ", source.getAbsolutePath(),
+                  target.getAbsolutePath(), e);
       } finally {
          CloseableUtil.close(inStream);
          CloseableUtil.close(outStream);

@@ -1,42 +1,41 @@
 package org.swarmer.operation;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.context.State;
 import org.swarmer.context.SwarmerCtx;
 import org.swarmer.exception.ExceptionThrower;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public abstract class InfiniteLoopOperation extends SwarmerOperation<SwarmerCtx> {
+public abstract class InfiniteLoopOperation extends SwarmerOperation<SwarmerCtx, Boolean> {
 
-   private static final Logger        LOG = LogManager.getLogger(InfiniteLoopOperation.class);
+   private static final Logger        LOG = LoggerFactory.getLogger(InfiniteLoopOperation.class);
    private final        AtomicBoolean running;
-   private              long          errorCount;
    private              Thread        thread;
 
    public InfiniteLoopOperation(String name, SwarmerCtx context) {
       super(name, context);
-      this.errorCount = 0;
       running = new AtomicBoolean(true);
    }
 
    public void cleanUp() { }
 
-   public final void execute() {
+   public final Boolean execute() {
       if (thread == null) {
          thread = new Thread(new MyRunnable(this), name());
          thread.start();
       }
+      return true;
    }
 
    public final void gracefulStop() throws InterruptedException {
       if (getThread() != null) {
-         LOG.info("Stopping {}", name());
+         LOG.info("Stopping Operation [{}]", name());
          stopRunning();
          waitUntilRunning();
-         LOG.info("{} stopped", name());
+         LOG.info("Operation [{}] stopped", name());
       }
    }
 
@@ -59,19 +58,18 @@ public abstract class InfiniteLoopOperation extends SwarmerOperation<SwarmerCtx>
    private void executeLoop() throws Exception {
       setState(State.RUNNING);
       try {
-         LOG.info("Starting {}", name());
+         LOG.info("Starting Operation [{}]", name());
          operationInitialize();
          while (running()) {
             try {
                loopBlock();
             } catch (Exception e) {
-               errorCount++;
                try {
                   handleError(e);
                } catch (Exception otherExc) {
                   setState(State.ERROR);
                   stopRunning();
-                  LOG.error("Error from handleError method: {}", ExceptionUtils.getStackTrace(e));
+                  LOG.error("Error In Operation [{}]: {}", name(), ExceptionUtils.getStackTrace(e));
                }
             }
          }

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true">
+
+    <contextName>Swarmer</contextName>
+
+    <appender name="STDOUT_INFO" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- deny all events with a level below INFO, that is TRACE and DEBUG -->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
+        <encoder>
+            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-35logger{1} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="STDOUT_ALL" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-35logger{1} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>swarmer.log</file>
+
+        <encoder>
+            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-35logger{1} - %msg%n</pattern>
+        </encoder>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <FileNamePattern>swarmer.%i.log.zip</FileNamePattern>
+            <MinIndex>1</MinIndex>
+            <MaxIndex>10</MaxIndex>
+        </rollingPolicy>
+
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <MaxFileSize>2MB</MaxFileSize>
+        </triggeringPolicy>
+    </appender>
+
+    <appender name="DB" class="ch.qos.logback.classic.db.DBAppender">
+        <!--
+        Here different class should be used because of connection pooling (faster logging into DB).
+        Currently not needed because no performance regarding logging is needed.
+        -->
+        <connectionSource class="ch.qos.logback.core.db.DriverManagerConnectionSource">
+            <driverClass>org.hsqldb.jdbc.JDBCDriver</driverClass>
+            <!-- <url>jdbc:hsqldb:file:D:/programming/java/swarmer_log_db/db</url> -->
+            <url>jdbc:hsqldb:hsql://localhost:10081/logdb</url>
+            <user>log</user>
+            <password>log</password>
+        </connectionSource>
+    </appender>
+
+    <root level="TRACE">
+        <appender-ref ref="STDOUT_ALL"/>
+    </root>
+
+    <logger name="org.swarmer" level="TRACE" additivity="false">
+        <appender-ref ref="STDOUT_INFO"/>
+        <appender-ref ref="DB"/>
+    </logger>
+
+</configuration>

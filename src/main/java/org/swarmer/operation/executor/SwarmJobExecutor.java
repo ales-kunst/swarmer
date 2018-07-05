@@ -1,8 +1,8 @@
 package org.swarmer.operation.executor;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.context.State;
 import org.swarmer.context.SwarmJob;
 import org.swarmer.context.SwarmerCtx;
@@ -11,7 +11,7 @@ import org.swarmer.util.SwarmUtil;
 
 public class SwarmJobExecutor extends InfiniteLoopOperation {
    public static final  String                   OP_NAME = "Swarm Deployment Executor";
-   private static final Logger                   LOG     = LogManager.getLogger(SwarmJobExecutor.class);
+   private static final Logger                   LOG     = LoggerFactory.getLogger(SwarmJobExecutor.class);
    private final        SwarmJobProcessorCreator processCreator;
    private              SwarmJob                 swarmJob;
 
@@ -49,8 +49,8 @@ public class SwarmJobExecutor extends InfiniteLoopOperation {
    @Override
    protected void handleError(Exception exception) {
       swarmJob.setState(State.ERROR);
-      LOG.error("Exception from processWatchEvents. Continue with watch. Error stacktrace: \n {}",
-                ExceptionUtils.getStackTrace(exception));
+      LOG.warn("Exception from processWatchEvents. Continue with watch. Error stacktrace: \n {}",
+               ExceptionUtils.getStackTrace(exception));
    }
 
    @Override

@@ -1,14 +1,14 @@
 package org.swarmer.util;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeroturnaround.exec.ProcessExecutor;
 
 import java.io.*;
 
 public class TestUtil {
    private static final int    DEFAULT_SWARM_STARTUP_TIME = 300;
-   private static final Logger LOG                        = LogManager.getLogger(TestUtil.class);
+   private static final Logger LOG                        = LoggerFactory.getLogger(TestUtil.class);
    private static final String TMP_FOLDER                 = System.getProperty("java.io.tmpdir");
    private static final String CONSUL_EXEC_PATH           = TMP_FOLDER + "\\consul.exe";
 

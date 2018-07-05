@@ -1,8 +1,8 @@
 package org.swarmer.operation.watcher;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.context.SwarmJob;
 import org.swarmer.context.SwarmerCtx;
 import org.swarmer.json.DeploymentContainerCfg;
@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 public class FolderChangesWatcher extends InfiniteLoopOperation {
    public static final  String OP_NAME = "Folder Watcher";
-   private static final Logger LOG     = LogManager.getLogger(FolderChangesWatcher.class);
+   private static final Logger LOG     = LoggerFactory.getLogger(FolderChangesWatcher.class);
 
    private SwarmerCfg   cfg;
    private Set<Integer> succesfullyLocked;
@@ -105,6 +105,12 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       return watchEventFolder.resolve(watchEventFile);
    }
 
+   @Override
+   protected void handleError(Exception exception) {
+      LOG.warn("Exception from processWatchEvents. Continue with watch. Error stacktrace: \n {}",
+               ExceptionUtils.getStackTrace(exception));
+   }
+
    private String getContainerName(WatchKey watchKey) {
       return findDeploymentCfg(watchKey).getName();
    }
@@ -170,10 +176,6 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       return parentPath.resolve(file);
    }
 
-   private File getDestFolder(WatchKey watchKey) {
-      return findDeploymentCfg(watchKey).getDestFolder();
-   }
-
    private String getFilePattern(WatchKey watchKey) {
       return findDeploymentCfg(watchKey).getFilePattern();
    }
@@ -182,16 +184,14 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       return succesfullyLocked.contains(watchKey.hashCode());
    }
 
-   @Override
-   protected void handleError(Exception exception) {
-      LOG.error("Exception from processWatchEvents. Continue with watch. Error stacktrace: \n {}",
-                ExceptionUtils.getStackTrace(exception));
+   private File getDestFolder(WatchKey watchKey) {
+      return findDeploymentCfg(watchKey).getDestFolder();
    }
-
-   @Override
-   protected void operationFinalize() {}
 
    private void setFileSuccessfullyLocked(WatchKey watchKey) {
       succesfullyLocked.add(watchKey.hashCode());
    }
+
+   @Override
+   protected void operationFinalize() {}
 }

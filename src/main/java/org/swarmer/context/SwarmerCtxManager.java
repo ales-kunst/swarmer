@@ -1,12 +1,12 @@
 package org.swarmer.context;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.swarmer.SwarmerInputParams;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.exception.ExceptionThrower;
 import org.swarmer.exception.ValidationException;
 import org.swarmer.json.SwarmerCfg;
+import org.swarmer.util.SwarmerInputParams;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,7 +14,7 @@ import java.io.IOException;
 public class SwarmerCtxManager {
    private static final Object            CTX_LOCK      = new Object();
    private static final SwarmerCtxManager CTX_MANAGER   = new SwarmerCtxManager();
-   private static final Logger            LOG           = LogManager.getLogger(SwarmerCtxManager.class);
+   private static final Logger            LOG           = LoggerFactory.getLogger(SwarmerCtxManager.class);
    private static final ObjectMapper      OBJECT_MAPPER = new ObjectMapper();
    private              SwarmerCtx        ctx;
 

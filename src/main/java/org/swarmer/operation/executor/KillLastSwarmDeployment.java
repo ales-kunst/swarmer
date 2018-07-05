@@ -1,14 +1,14 @@
 package org.swarmer.operation.executor;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.context.SwarmerCtx;
 import org.swarmer.json.SwarmDeploymentCfg;
 
 import java.io.File;
 
 public class KillLastSwarmDeployment extends SwarmDeploymentProcessor {
-   private static final Logger LOG = LogManager.getLogger(KillLastSwarmDeployment.class);
+   private static final Logger LOG = LoggerFactory.getLogger(KillLastSwarmDeployment.class);
 
    public KillLastSwarmDeployment(SwarmerCtx ctx) {
       super(ctx);
@@ -16,7 +16,7 @@ public class KillLastSwarmDeployment extends SwarmDeploymentProcessor {
 
 
    @Override
-   public void process() {
+   public void processImpl() {
       int                lastIndex         = containerCfg().swarmDeploymentCfgsSize() - 1;
       SwarmDeploymentCfg lastDeploymentCfg = containerCfg().getSwarmDeploymentCfg(lastIndex);
       shutdownLastSwarmDeployment(lastDeploymentCfg);

@@ -1,13 +1,13 @@
 package org.swarmer.util;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
 
 public class CloseableUtil {
-   private static final Logger LOG = LogManager.getLogger(CloseableUtil.class);
+   private static final Logger LOG = LoggerFactory.getLogger(CloseableUtil.class);
 
    public static boolean close(Closeable closable) {
       boolean isSuccessfull = false;

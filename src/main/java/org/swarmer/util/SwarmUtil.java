@@ -2,8 +2,8 @@ package org.swarmer.util;
 
 import com.ecwid.consul.v1.health.model.Check;
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeroturnaround.exec.ProcessExecutor;
 import org.zeroturnaround.exec.ProcessResult;
 
@@ -25,7 +25,7 @@ public class SwarmUtil {
    private static final String JAVA_COMMAND          = "java";
    private static final String JVM_ARG_DELIMETER     = "-D";
    private static final String JVM_SWARM_PORT_OPTION = "-Dswarm.http.port=";
-   private static final Logger LOG                   = LogManager.getLogger(SwarmUtil.class);
+   private static final Logger LOG                   = LoggerFactory.getLogger(SwarmUtil.class);
    private static final String RUN_COMMAND_OPTION    = "/c";
    private static final String START_COMMAND         = "start";
    private static final String START_PATH_OPTION     = "/D";
@@ -67,17 +67,39 @@ public class SwarmUtil {
       return resultArgs;
    }
 
-   public static int getSwarmPID(String swarmJar, long uid) {
+   public static int getSwarmPid(String swarmJar, long uid) {
       int                   pid = -1;
       Future<ProcessResult> future;
       try {
          future = new ProcessExecutor().command("jps.exe", "-mlv").readOutput(true)
                                        .start().getFuture();
          ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
-         pid = parsePID(processResult.outputUTF8(), swarmJar, uid);
+         pid = parsePid(processResult.outputUTF8(), swarmJar, uid);
       } catch (Exception e) {
-         LOG.error("Error executing getSwarmPID: {}", ExceptionUtils.getStackTrace(e));
+         LOG.error("Error executing getSwarmPid: {}", ExceptionUtils.getStackTrace(e));
       }
+      return pid;
+   }
+
+   private static int parsePid(String content, String swarmJar, long uid) {
+      int pid = -1;
+
+      if (content.isEmpty()) {
+         return pid;
+      }
+
+      LOG.debug("Searching Swarm PID with UID [{}] in content:\n {}", uid, content);
+      Scanner sc   = new Scanner(content);
+      String  line = null;
+      while (sc.hasNextLine() || (line == null)) {
+         line = sc.nextLine();
+         if (line.contains(swarmJar) && line.contains("-Duid=" + uid)) {
+            Scanner sc_pid = new Scanner(line);
+            pid = sc_pid.nextInt();
+            break;
+         }
+      }
+      LOG.debug("Found PID [{}].", pid);
       return pid;
    }
 
@@ -134,9 +156,21 @@ public class SwarmUtil {
             success = true;
          }
       } catch (Exception e) {
-         LOG.error("Error executing getSwarmPID: {}", ExceptionUtils.getStackTrace(e));
+         LOG.error("Error executing getSwarmPid: {}", ExceptionUtils.getStackTrace(e));
       }
       return success;
+   }
+
+   public static Process startSwarmInstance(String... command) {
+      Process process = null;
+      try {
+         String teeLogFilename = getLogFilename(command);
+         process = new ProcessExecutor().command(command).environment("LOGFILE", teeLogFilename).readOutput(true)
+                                        .start().getProcess();
+      } catch (Exception e) {
+         LOG.error("Error executing startSwarmInstance: {}", ExceptionUtils.getStackTrace(e));
+      }
+      return process;
    }
 
    private static String getLogFilename(String[] command) {
@@ -162,6 +196,8 @@ public class SwarmUtil {
                                                     int appWaitTimeoutSeconds,
                                                     long loopWaitMillis) throws IOException {
       ConsulQuery consulQuery = ConsulQuery.url(consulUrl);
+      LOG.debug("|---> Starting Wait for microservice to register on Consul [Servicename: {}; ServiceId: {}]",
+                serviceName, serviceId);
       Predicate<Integer> waitForServiceRegistrationPred = (Integer time) -> {
          boolean     success            = false;
          final Check swarmInstanceCheck = consulQuery.getSwarmInstance(serviceName, serviceId);
@@ -171,8 +207,11 @@ public class SwarmUtil {
 
          return success;
       };
+      boolean resultRegistered = waitLoop(waitForServiceRegistrationPred, appWaitTimeoutSeconds, loopWaitMillis);
+      LOG.debug("--->| End Wait for microservice to register on Consul [Servicename: {}; ServiceId: {}; Success: {}]",
+                serviceName, serviceId, resultRegistered);
 
-      return waitLoop(waitForServiceRegistrationPred, appWaitTimeoutSeconds, loopWaitMillis);
+      return resultRegistered;
    }
 
    private static boolean waitLoop(Predicate<Integer> predicate, int waitTimeout,
@@ -189,6 +228,7 @@ public class SwarmUtil {
          }
          timeWaited++;
       }
+
       return successfulRun;
    }
 
@@ -203,57 +243,39 @@ public class SwarmUtil {
       return success;
    }
 
-
    public static boolean waitUntilSwarmProcExits(int pid, int shutdownTimeoutSeconds,
                                                  long loopWaitMillis) {
-      // TODO Refactor method waitUntilSwarmProcExits
-      boolean processExited = false;
-      int     timeWaited    = 0;
-      while (true) {
-         waitFor(loopWaitMillis);
-         if (!pidExists(pid)) {
-            processExited = true;
-            break;
-         } else if (timeWaited > shutdownTimeoutSeconds) {
-            break;
-         }
-         timeWaited++;
-      }
+      boolean processExited;
+      LOG.debug("|---> Starting Wait for Swarm process to exit [PID: {}; Start: {}]", pid, System.currentTimeMillis());
+      processExited = waitLoop((Integer time) -> !pidExists(pid), shutdownTimeoutSeconds, loopWaitMillis);
+      LOG.debug("--->| End Wait for Swarm process to exit [PID: {}; ProcessExited: {}, End: {}]", pid, processExited,
+                System.currentTimeMillis());
       return processExited;
-   }
-
-   public static Process startSwarmInstance(String... command) {
-      Process process = null;
-      try {
-         String teeLogFilename = getLogFilename(command);
-         process = new ProcessExecutor().command(command).environment("LOGFILE", teeLogFilename).readOutput(true)
-                                        .start().getProcess();
-      } catch (Exception e) {
-         LOG.error("Error executing startSwarmInstance: {}", ExceptionUtils.getStackTrace(e));
-      }
-      return process;
    }
 
    private static boolean pidExists(int pid) {
       boolean               resultPidExists = false;
       Future<ProcessResult> future;
       try {
+         LOG.debug("Checking existence of PID [{}]", pid);
          future = new ProcessExecutor().command("jps.exe", "-mlv").readOutput(true)
                                        .start().getFuture();
          ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
-         resultPidExists = parsePID(processResult.outputUTF8(), pid);
+         resultPidExists = parsePid(processResult.outputUTF8(), pid);
+         LOG.debug("PID [{}] exists: {}", pid, resultPidExists);
       } catch (Exception e) {
-         LOG.error("Error executing getSwarmPID: {}", ExceptionUtils.getStackTrace(e));
+         LOG.error("Error executing pidExists: {}", ExceptionUtils.getStackTrace(e));
       }
       return resultPidExists;
    }
 
-   private static boolean parsePID(String content, int pid) {
+   private static boolean parsePid(String content, int pid) {
       boolean resultPIDExists = false;
       if (content.isEmpty()) {
          return resultPIDExists;
       }
 
+      LOG.debug("Searching for PID [{}] in content:\n {}", pid, content);
       Scanner sc   = new Scanner(content);
       String  line = null;
       while (sc.hasNextLine() || (line == null)) {
@@ -266,26 +288,6 @@ public class SwarmUtil {
       }
 
       return resultPIDExists;
-   }
-
-   private static int parsePID(String content, String swarmJar, long uid) {
-      int pid = -1;
-
-      if (content.isEmpty()) {
-         return pid;
-      }
-
-      Scanner sc   = new Scanner(content);
-      String  line = null;
-      while (sc.hasNextLine() || (line == null)) {
-         line = sc.nextLine();
-         if (line.contains(swarmJar) && line.contains("-Duid=" + uid)) {
-            Scanner sc_pid = new Scanner(line);
-            pid = sc_pid.nextInt();
-            break;
-         }
-      }
-      return pid;
    }
 
    private SwarmUtil() {}

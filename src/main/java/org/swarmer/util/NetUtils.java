@@ -1,8 +1,8 @@
 package org.swarmer.util;
 
 import org.apache.commons.lang.math.IntRange;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.exception.ExceptionThrower;
 
 import java.io.BufferedReader;
@@ -19,13 +19,15 @@ public class NetUtils {
    public static final  int    MAX_PORT_NUMBER       = 65535;
    public static final  int    MIN_PORT_NUMBER       = 1100;
    private static final String IP_VALIDATION_PATTERN = "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}";
-   private static final Logger LOG                   = LogManager.getLogger(NetUtils.class);
+   private static final Logger LOG                   = LoggerFactory.getLogger(NetUtils.class);
 
    public static int getFirstAvailablePort(IntRange range) {
       int freePort = -1;
+      LOG.debug("Obtain first available port [{}, {}].", range.getMinimumInteger(), range.getMaximumInteger());
       for (int port = range.getMinimumInteger(); port <= range.getMaximumInteger(); port++) {
          if (isPortAvailable(port)) {
             freePort = port;
+            LOG.debug("Found available port [{}].", freePort);
             break;
          }
       }
@@ -51,7 +53,7 @@ public class NetUtils {
 
          return true;
       } catch (IOException e) {
-         LOG.trace("Error in isPortAvailable: {}", e);
+         // If IOEXception happens then we know that the port is already taken
       } finally {
          CloseableUtil.close(datagramSocket);
          CloseableUtil.close(socket);
