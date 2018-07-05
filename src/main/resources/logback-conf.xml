@@ -18,25 +18,25 @@
             <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-35logger{1} - %msg%n</pattern>
         </encoder>
     </appender>
+    <!--
+        <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>swarmer.log</file>
 
-    <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>swarmer.log</file>
+            <encoder>
+                <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-35logger{1} - %msg%n</pattern>
+            </encoder>
 
-        <encoder>
-            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-35logger{1} - %msg%n</pattern>
-        </encoder>
+            <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+                <FileNamePattern>swarmer.%i.log.zip</FileNamePattern>
+                <MinIndex>1</MinIndex>
+                <MaxIndex>10</MaxIndex>
+            </rollingPolicy>
 
-        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <FileNamePattern>swarmer.%i.log.zip</FileNamePattern>
-            <MinIndex>1</MinIndex>
-            <MaxIndex>10</MaxIndex>
-        </rollingPolicy>
-
-        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
-            <MaxFileSize>2MB</MaxFileSize>
-        </triggeringPolicy>
-    </appender>
-
+            <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+                <MaxFileSize>2MB</MaxFileSize>
+            </triggeringPolicy>
+        </appender>
+    -->
     <appender name="DB" class="ch.qos.logback.classic.db.DBAppender">
         <!--
         Here different class should be used because of connection pooling (faster logging into DB).

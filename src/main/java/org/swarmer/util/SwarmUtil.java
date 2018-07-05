@@ -253,7 +253,7 @@ public class SwarmUtil {
       return processExited;
    }
 
-   private static boolean pidExists(int pid) {
+   public static boolean pidExists(int pid) {
       boolean               resultPidExists = false;
       Future<ProcessResult> future;
       try {

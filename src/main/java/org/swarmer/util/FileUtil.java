@@ -13,7 +13,6 @@ import java.nio.file.Path;
 import java.util.Random;
 
 public class FileUtil {
-
    public static final  String KILL_APP_PATH    = System.getProperty("java.io.tmpdir") + "\\windows-kill.exe";
    public static final  String WIN_TEE_APP_PATH = System.getProperty("java.io.tmpdir") + "\\wintee.exe";
    private static final Logger LOG              = LoggerFactory.getLogger(FileUtil.class);
@@ -46,11 +45,11 @@ public class FileUtil {
    }
 
    public static boolean copyWinTeeAppToTmp() {
-      return copyAppToTmp("/wintee.exe", WIN_TEE_APP_PATH);
+      return copyAppToTmp("/apps/wintee.exe", WIN_TEE_APP_PATH);
    }
 
    public static boolean copyWindowsKillAppToTmp() {
-      return copyAppToTmp("/windows-kill.exe", KILL_APP_PATH);
+      return copyAppToTmp("/apps/windows-kill.exe", KILL_APP_PATH);
    }
 
    private static boolean copyAppToTmp(String resourcePath, String targetpath) {

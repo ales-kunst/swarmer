@@ -152,8 +152,8 @@
               <path>target/start_swarmer.tmpl.cmd</path>
               <lines>
                 <line>@set PATH=Path to Java bin;%PATH%</line>
-                <line>@set SWARMER_CONF_FILE_JVM_ARG=-Dswarmer.configuration.file=""</line>
-                <line>@set HSQLDB_FILE_JVM_ARG="-Dswarmer.hsqldb.path="./logs/log_db"</line>
+                <line>::@set SWARMER_CONF_FILE_JVM_ARG=-Dswarmer.configuration.file=""</line>
+                <line>::@set HSQLDB_FILE_JVM_ARG="-Dswarmer.hsqldb.path="./logs/log_db"</line>
                 <line>@java %SWARMER_CONF_FILE_JVM_ARG% %HSQLDB_FILE_JVM_ARG% -jar ${project.build.finalName}.jar</line>
               </lines>
             </file>

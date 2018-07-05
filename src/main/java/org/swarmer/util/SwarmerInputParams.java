@@ -23,7 +23,7 @@ public class SwarmerInputParams {
    }
 
    public static String jsonAbsoluteFilePath() {
-      String defaultFilepath = "./conf/swarmer_config.json";
+      String defaultFilepath = "./conf/" + LAST_STATE_CFG_JSON_FILENAME;
       File   cfgFile         = new File(System.getProperty(SWARMER_CONFIG_FILE_KEY, defaultFilepath));
       return cfgFile.getAbsolutePath();
    }

@@ -1,9 +1,12 @@
 package org.swarmer.context;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.exception.ExceptionThrower;
 import org.swarmer.exception.ValidationException;
 import org.swarmer.json.DeploymentContainerCfg;
 import org.swarmer.json.SwarmDeploymentCfg;
+import org.swarmer.util.SwarmUtil;
 
 import java.io.File;
 import java.nio.file.WatchKey;
@@ -13,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 public class DeploymentContainer implements Destroyable, CtxVisitableElement {
+   private static final Logger LOG = LoggerFactory.getLogger(DeploymentContainer.class);
 
    // Locks
    private final Object DEPLOYMENT_IN_PROGRESS_LOCK = new Object();
@@ -35,7 +39,14 @@ public class DeploymentContainer implements Destroyable, CtxVisitableElement {
       swarmDeployments.put(DeploymentColor.GREEN, new ArrayList<>());
       for (int index = 0; index < deploymentContainerCfg.swarmDeploymentCfgsSize(); index++) {
          SwarmDeploymentCfg deploymentCfg = deploymentContainerCfg.getSwarmDeploymentCfg(index);
-         addDeployment(deploymentCfg.getDeploymentColorEnum(), SwarmDeployment.builder(deploymentCfg).build());
+         int                pid           = deploymentCfg.getPid();
+         if ((pid >= -1) && SwarmUtil.pidExists(pid)) {
+            LOG.debug("Swarm deployment with PID {} was added to container {}", pid, deploymentContainerCfg.getName());
+            addDeployment(deploymentCfg.getDeploymentColorEnum(), SwarmDeployment.builder(deploymentCfg).build());
+         } else {
+            LOG.warn("Swarm deployment with PID {} was NOT added to container {}", pid,
+                     deploymentContainerCfg.getName());
+         }
       }
    }
 

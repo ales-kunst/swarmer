@@ -1,2 +1,2 @@
-Swarmer vswarmer-1.1-b13 - Executes Wildfly Swarms
+Swarmer vswarmer-1.1-b17 - Executes Wildfly Swarms
 Implemented 2018 by Alesq
