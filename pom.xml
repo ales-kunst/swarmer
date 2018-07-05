@@ -22,9 +22,9 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <failOnMissingWebXml>false</failOnMissingWebXml>
-    <swarmer.version.number>
-      ${project.artifactId}-${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber}
-    </swarmer.version.number>
+      <swarmer.version.number>
+          ${project.artifactId}-${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber}
+      </swarmer.version.number>
   </properties>
 
   <dependencies>
@@ -100,8 +100,8 @@
 
   <build>
     <!--suppress MavenModelInspection -->
-    <finalName>${project.artifactId}-${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber}
-    </finalName>
+      <finalName>${project.artifactId}-${parsedVersion.majorVersion}.${parsedVersion.minorVersion}-b${buildNumber}
+      </finalName>
     <!-- <finalName>swarmer</finalName> -->
     <plugins>
       <plugin>
@@ -210,8 +210,8 @@
                     <Main-Class>org.swarmer.Main</Main-Class>
                     <Implementation-Title>${project.name}</Implementation-Title>
                     <!--suppress MavenModelInspection -->
-                    <Implementation-Version>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}
-                    </Implementation-Version>
+                      <Implementation-Version>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}
+                      </Implementation-Version>
                     <Implementation-Vendor-Id>${project.groupId}</Implementation-Vendor-Id>
                     <Implementation-Vendor>${pom.organization.name}</Implementation-Vendor>
                     <Build-Number>b${buildNumber}</Build-Number>

@@ -111,45 +111,12 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
                ExceptionUtils.getStackTrace(exception));
    }
 
-   private String getContainerName(WatchKey watchKey) {
-      return findDeploymentCfg(watchKey).getName();
+   private File getDestFolder(WatchKey watchKey) {
+      return findDeploymentCfg(watchKey).getDestFolder();
    }
 
-   private void processModifyEvent(WatchKey queuedKey, WatchEvent<?> watchEvent) {
-      Path srcPath  = getFullPath(queuedKey, watchEvent);
-      Path destPath = getDestPath(queuedKey, watchEvent);
-
-      boolean canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
-
-      if (!canSrcFileBeLocked) {
-         LOG.trace("Sleep for {} ms", getContext().getLockWaitTimeout());
-         SwarmUtil.waitFor(getContext().getLockWaitTimeout());
-         canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
-      }
-      // Remove Dest file only if it exists and src file can be locked
-      boolean destFileExists =
-              (destPath.toFile().exists() && canSrcFileBeLocked) && !FileUtil.removeFile(destPath);
-      boolean fileAccessConditionsOk = canSrcFileBeLocked && !destFileExists;
-
-      if (!canSrcFileBeLocked) {
-         LOG.warn("File not copied because source file can not be locked.");
-      } else if (destFileExists) {
-         // We have to add that the lock has happened for next two events should be ignored
-         setFileSuccessfullyLocked(queuedKey);
-         LOG.error("Destination file [{}] is locked by another process.", destPath);
-      } else if (fileAccessConditionsOk) {
-         setFileSuccessfullyLocked(queuedKey);
-         LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
-                  srcPath.toFile().length());
-         FileUtil.nioBufferCopy(srcPath.toFile(), destPath.toFile());
-         String containerName = getContainerName(queuedKey);
-         getContext().addSwarmJob(SwarmJob.builder()
-                                          .action(SwarmJob.Action.RUN_NEW)
-                                          .containerName(containerName)
-                                          .swarmJarFile(destPath.toFile())
-                                          .build());
-         srcPath.toFile().delete();
-      }
+   private String getFilePattern(WatchKey watchKey) {
+      return findDeploymentCfg(watchKey).getFilePattern();
    }
 
    private void clearFileSuccessfullyLocked(WatchKey watchKey) {
@@ -176,20 +143,67 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       return parentPath.resolve(file);
    }
 
-   private String getFilePattern(WatchKey watchKey) {
-      return findDeploymentCfg(watchKey).getFilePattern();
+   private void setFileSuccessfullyLocked(WatchKey watchKey) {
+      succesfullyLocked.add(watchKey.hashCode());
    }
 
    private boolean isFileSuccessfullyLocked(WatchKey watchKey) {
       return succesfullyLocked.contains(watchKey.hashCode());
    }
 
-   private File getDestFolder(WatchKey watchKey) {
-      return findDeploymentCfg(watchKey).getDestFolder();
+   private void processModifyEvent(WatchKey queuedKey, WatchEvent<?> watchEvent) {
+      Path srcPath  = getFullPath(queuedKey, watchEvent);
+      Path destPath = getDestPath(queuedKey, watchEvent);
+
+      boolean canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
+
+      if (!canSrcFileBeLocked) {
+         LOG.trace("Sleep for {} ms", getContext().getLockWaitTimeout());
+         SwarmUtil.waitFor(getContext().getLockWaitTimeout());
+         canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
+      }
+      // Remove Dest file only if it exists and src file can be locked
+      boolean destFileExists =
+              (destPath.toFile().exists() && canSrcFileBeLocked) && !FileUtil.forceRemoveFile(destPath);
+      boolean fileAccessConditionsOk = canSrcFileBeLocked && !destFileExists;
+
+      if (!canSrcFileBeLocked) {
+         LOG.warn("File not copied because source file can not be locked.");
+      } else if (destFileExists) {
+         // We have to add that the lock has happened for next two events should be ignored
+         setFileSuccessfullyLocked(queuedKey);
+         LOG.error("Destination file [{}] is locked by another process.", destPath);
+      } else if (fileAccessConditionsOk) {
+         setFileSuccessfullyLocked(queuedKey);
+         LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
+                  srcPath.toFile().length());
+         boolean srcJarFileValid = SwarmUtil.isJarFileValid(srcPath.toFile());
+         LOG.info("Source file [{}] valid JAR: {}", srcPath.toFile().getAbsolutePath(),
+                  srcJarFileValid);
+
+         FileUtil.copyFile(srcPath.toFile(), destPath.toFile());
+
+         boolean destJarFileValid = SwarmUtil.isJarFileValid(destPath.toFile());
+         LOG.info("Target file [{}] valid JAR: {}", destPath.toFile().getAbsolutePath(),
+                  destJarFileValid);
+         if (!srcJarFileValid || !destJarFileValid) {
+            LOG.warn("Trying to copy file one more time.");
+            FileUtil.copyFile(srcPath.toFile(), destPath.toFile());
+         }
+
+         FileUtil.forceRemoveFile(srcPath.toFile());
+
+         String containerName = getContainerName(queuedKey);
+         getContext().addSwarmJob(SwarmJob.builder()
+                                          .action(SwarmJob.Action.RUN_NEW)
+                                          .containerName(containerName)
+                                          .swarmJarFile(destPath.toFile())
+                                          .build());
+      }
    }
 
-   private void setFileSuccessfullyLocked(WatchKey watchKey) {
-      succesfullyLocked.add(watchKey.hashCode());
+   private String getContainerName(WatchKey watchKey) {
+      return findDeploymentCfg(watchKey).getName();
    }
 
    @Override

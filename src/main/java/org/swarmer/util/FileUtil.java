@@ -1,14 +1,12 @@
 package org.swarmer.util;
 
+import org.apache.commons.io.FileDeleteStrategy;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.file.DirectoryNotEmptyException;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.Random;
 
@@ -44,12 +42,57 @@ public class FileUtil {
       return canObtainExclusiveLock;
    }
 
-   public static boolean copyWinTeeAppToTmp() {
-      return copyAppToTmp("/apps/wintee.exe", WIN_TEE_APP_PATH);
+   public static boolean copyFile(File source, File target) {
+      boolean isCopySuccess = false;
+      /*
+      boolean          isCopySuccess = false;
+      FileInputStream  inStream      = null;
+      FileOutputStream outStream     = null;
+      FileChannel      inChannel     = null;
+      FileChannel      outChannel    = null;
+      */
+      if (source == null || target == null) {
+         LOG.warn("Can not copy file if source or target is null!");
+         return isCopySuccess;
+      }
+
+      try {
+         LOG.info("|---> Started copying file [{} -> {}]", source.getAbsolutePath(), target.getAbsolutePath());
+         /*
+         inStream = new FileInputStream(source);
+         outStream = new FileOutputStream(target);
+         inChannel = inStream.getChannel();
+         outChannel = outStream.getChannel();
+
+         ByteBuffer buffer = ByteBuffer.allocateDirect(8192);
+         while (inChannel.read(buffer) != -1) {
+            buffer.flip();
+            while (buffer.hasRemaining()) {
+               outChannel.write(buffer);
+            }
+            buffer.clear();
+         }
+         */
+         FileUtils.copyFile(source, target);
+         LOG.info("--->| Ended copying file [{} -> {}]", source.getAbsolutePath(), target.getAbsolutePath());
+         isCopySuccess = true;
+      } catch (IOException e) {
+         LOG.warn("Error at copyFile when copying file [{} -> {}]: ", source.getAbsolutePath(),
+                  target.getAbsolutePath(), e);
+      } finally {
+         /*
+         CloseableUtil.close(inStream);
+         CloseableUtil.close(outStream);
+         CloseableUtil.close(inChannel);
+         CloseableUtil.close(outChannel);
+         */
+      }
+
+      return isCopySuccess;
    }
 
-   public static boolean copyWindowsKillAppToTmp() {
-      return copyAppToTmp("/apps/windows-kill.exe", KILL_APP_PATH);
+   public static boolean copyWinTeeAppToTmp() {
+      return copyAppToTmp("/apps/wintee.exe", WIN_TEE_APP_PATH);
    }
 
    private static boolean copyAppToTmp(String resourcePath, String targetpath) {
@@ -73,68 +116,31 @@ public class FileUtil {
       return success;
    }
 
+   public static boolean copyWindowsKillAppToTmp() {
+      return copyAppToTmp("/apps/windows-kill.exe", KILL_APP_PATH);
+   }
+
+   public static boolean forceRemoveFile(Path source) {
+      return forceRemoveFile(source.toFile());
+   }
+
+   public static boolean forceRemoveFile(File file) {
+      boolean deleted = false;
+      try {
+         FileDeleteStrategy.FORCE.delete(file);
+         LOG.debug("File [{}] could SUCCESSFULLY removed.", file.getAbsolutePath());
+         deleted = true;
+      } catch (IOException ioe) {
+         LOG.warn("File [{}] could NOT be removed:\n{}", file.getAbsolutePath(), ExceptionUtils.getFullStackTrace(ioe));
+      }
+
+      return deleted;
+   }
+
    public static boolean matchesFilePattern(String fileName, String pattern) {
       boolean matches = fileName.matches(pattern);
       LOG.debug("Using pattern {} on filename {} [match: {}].", pattern, fileName, matches);
       return matches;
-   }
-
-   public static boolean nioBufferCopy(File source, File target) {
-      boolean          isCopySuccess = false;
-      FileInputStream  inStream      = null;
-      FileOutputStream outStream     = null;
-      FileChannel      inChannel     = null;
-      FileChannel      outChannel    = null;
-
-      if (source == null || target == null) {
-         LOG.warn("Can not copy file if source or target is null!");
-         return isCopySuccess;
-      }
-
-      try {
-         LOG.info("|---> Started copying file [{} -> {}]", source.getAbsolutePath(), target.getAbsolutePath());
-         inStream = new FileInputStream(source);
-         outStream = new FileOutputStream(target);
-         inChannel = inStream.getChannel();
-         outChannel = outStream.getChannel();
-
-         ByteBuffer buffer = ByteBuffer.allocateDirect(8192);
-         while (inChannel.read(buffer) != -1) {
-            buffer.flip();
-            while (buffer.hasRemaining()) {
-               outChannel.write(buffer);
-            }
-            buffer.clear();
-         }
-         LOG.info("--->| Ended copying file [{} -> {}]", source.getAbsolutePath(), target.getAbsolutePath());
-         isCopySuccess = true;
-      } catch (IOException e) {
-         LOG.warn("Error at nioBufferCopy when copying file [{} -> {}]: ", source.getAbsolutePath(),
-                  target.getAbsolutePath(), e);
-      } finally {
-         CloseableUtil.close(inStream);
-         CloseableUtil.close(outStream);
-         CloseableUtil.close(inChannel);
-         CloseableUtil.close(outChannel);
-      }
-
-      return isCopySuccess;
-   }
-
-   public static boolean removeFile(Path source) {
-      boolean success = false;
-      try {
-         success = Files.deleteIfExists(source);
-         LOG.debug("Successfully removed path [{}].", source.toString());
-      } catch (NoSuchFileException e) {
-         LOG.error("No such file in removeFile for path [{}]: {}", source.toString(), e);
-      } catch (DirectoryNotEmptyException e) {
-         LOG.error("Folder not empty in removeFile for path [{}]: {}", source.toString(), e);
-      } catch (IOException e) {
-         LOG.error("Error in removeFile for path [{}]: {}", source.toString(), e);
-      }
-
-      return success;
    }
 
    public static boolean winTeeAppExists() {

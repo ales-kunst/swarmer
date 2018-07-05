@@ -62,8 +62,7 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
       if (processSigInted) {
          LOG.info("Trying to SIGINT process with PID [{}]", pid);
          int shutdownTimeout = getCtx().getGeneralCfgData().getLockWaitTimeout();
-         swarmExited = SwarmUtil.waitUntilSwarmProcExits(pid, shutdownTimeout,
-                                                         DEFAULT_LOOP_WAIT_IN_MILLIS);
+         swarmExited = SwarmUtil.waitUntilSwarmProcExits(pid, shutdownTimeout);
       }
       if (!swarmExited) {
          String errMsg = String.format(DEPLOYMENT_COULD_NOT_BE_STOPPED,
@@ -95,12 +94,11 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
                                                                 copiedJarFile);
       SwarmUtil.startSwarmInstance(swarmCommand);
       String serviceId      = getServiceId(port);
-      int    startupTimeout = getCtx().getGeneralCfgData().getLockWaitTimeout();
+      int    startupTimeout = getCtx().getGeneralCfgData().getSwarmDefaultStartupTime();
       boolean registeredSuccessful = SwarmUtil.waitForServiceRegistration(containerCfg().getConsulUrl(),
                                                                           containerCfg().getConsulServiceName(),
                                                                           serviceId,
-                                                                          startupTimeout,
-                                                                          DEFAULT_LOOP_WAIT_IN_MILLIS);
+                                                                          startupTimeout);
       SwarmDeployment resultDeployment = null;
       if (registeredSuccessful) {
          int pid = SwarmUtil.getSwarmPid(copiedJarFile.getName(), timeStarted);

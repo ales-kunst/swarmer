@@ -10,11 +10,14 @@ import org.zeroturnaround.exec.ProcessResult;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 
 public class SwarmUtil {
@@ -101,6 +104,25 @@ public class SwarmUtil {
       }
       LOG.debug("Found PID [{}].", pid);
       return pid;
+   }
+
+   public static boolean isJarFileValid(File jarFile) {
+      boolean resultJarFileValid = true;
+      LOG.debug("Checking validity of JAR file [{}]", jarFile.getAbsolutePath());
+      ZipFile file = null;
+      try {
+         file = new ZipFile(jarFile);
+         Enumeration<? extends ZipEntry> entries = file.entries();
+         while (entries.hasMoreElements()) {
+            entries.nextElement();
+         }
+      } catch (Exception ex) {
+         resultJarFileValid = false;
+      } finally {
+         CloseableUtil.close(file);
+      }
+      LOG.debug("JAR file [{}] is valid: {}", resultJarFileValid);
+      return resultJarFileValid;
    }
 
    public static boolean javaProcessStatusToolExists() {
@@ -193,11 +215,11 @@ public class SwarmUtil {
    }
 
    public static boolean waitForServiceRegistration(String consulUrl, String serviceName, String serviceId,
-                                                    int appWaitTimeoutSeconds,
-                                                    long loopWaitMillis) throws IOException {
+                                                    int appWaitTimeoutSeconds) throws IOException {
       ConsulQuery consulQuery = ConsulQuery.url(consulUrl);
-      LOG.debug("|---> Starting Wait for microservice to register on Consul [Servicename: {}; ServiceId: {}]",
-                serviceName, serviceId);
+      LOG.debug(
+              "|---> Starting Wait for microservice to register on Consul [Servicename: {}; ServiceId: {}; Timeout: {}]",
+              serviceName, serviceId, appWaitTimeoutSeconds);
       Predicate<Integer> waitForServiceRegistrationPred = (Integer time) -> {
          boolean     success            = false;
          final Check swarmInstanceCheck = consulQuery.getSwarmInstance(serviceName, serviceId);
@@ -207,23 +229,22 @@ public class SwarmUtil {
 
          return success;
       };
-      boolean resultRegistered = waitLoop(waitForServiceRegistrationPred, appWaitTimeoutSeconds, loopWaitMillis);
+      boolean resultRegistered = waitLoop(waitForServiceRegistrationPred, appWaitTimeoutSeconds);
       LOG.debug("--->| End Wait for microservice to register on Consul [Servicename: {}; ServiceId: {}; Success: {}]",
                 serviceName, serviceId, resultRegistered);
 
       return resultRegistered;
    }
 
-   private static boolean waitLoop(Predicate<Integer> predicate, int waitTimeout,
-                                   long loopWaitMillis) {
+   private static boolean waitLoop(Predicate<Integer> predicate, int waitTimeoutInSec) {
       boolean successfulRun = false;
       int     timeWaited    = 0;
       while (true) {
-         waitFor(loopWaitMillis);
+         waitFor(1000);
          if (predicate.test(timeWaited)) {
             successfulRun = true;
             break;
-         } else if (timeWaited > waitTimeout) {
+         } else if (timeWaited > waitTimeoutInSec) {
             break;
          }
          timeWaited++;
@@ -243,11 +264,10 @@ public class SwarmUtil {
       return success;
    }
 
-   public static boolean waitUntilSwarmProcExits(int pid, int shutdownTimeoutSeconds,
-                                                 long loopWaitMillis) {
+   public static boolean waitUntilSwarmProcExits(int pid, int shutdownTimeoutSeconds) {
       boolean processExited;
       LOG.debug("|---> Starting Wait for Swarm process to exit [PID: {}; Start: {}]", pid, System.currentTimeMillis());
-      processExited = waitLoop((Integer time) -> !pidExists(pid), shutdownTimeoutSeconds, loopWaitMillis);
+      processExited = waitLoop((Integer time) -> !pidExists(pid), shutdownTimeoutSeconds);
       LOG.debug("--->| End Wait for Swarm process to exit [PID: {}; ProcessExited: {}, End: {}]", pid, processExited,
                 System.currentTimeMillis());
       return processExited;

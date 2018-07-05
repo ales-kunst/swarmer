@@ -13,11 +13,12 @@
         </encoder>
     </appender>
 
-    <appender name="STDOUT_ALL" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-35logger{1} - %msg%n</pattern>
         </encoder>
     </appender>
+
     <!--
         <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
             <file>swarmer.log</file>
@@ -37,6 +38,7 @@
             </triggeringPolicy>
         </appender>
     -->
+
     <appender name="DB" class="ch.qos.logback.classic.db.DBAppender">
         <!--
         Here different class should be used because of connection pooling (faster logging into DB).
@@ -51,11 +53,11 @@
         </connectionSource>
     </appender>
 
-    <root level="TRACE">
-        <appender-ref ref="STDOUT_ALL"/>
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
     </root>
 
-    <logger name="org.swarmer" level="TRACE" additivity="false">
+    <logger name="org.swarmer" level="DEBUG" additivity="false">
         <appender-ref ref="STDOUT_INFO"/>
         <appender-ref ref="DB"/>
     </logger>
