@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.swarmer.context.SwarmerCtx;
 import org.swarmer.json.SwarmDeploymentCfg;
+import org.swarmer.util.FileUtil;
 
 import java.io.File;
 
@@ -30,7 +31,8 @@ public class KillLastSwarmDeployment extends SwarmDeploymentProcessor {
       shutdownSwarmInstance(pid, windowTitle);
       File fileToRemove = new File(lastDeploymentCfg.getSwarmFilePath());
       if (fileToRemove.exists()) {
-         fileToRemove.delete();
+         LOG.info("Removing of old deployment swarm file [{}].", fileToRemove.getAbsolutePath());
+         FileUtil.forceRemoveFile(fileToRemove);
       }
    }
 }

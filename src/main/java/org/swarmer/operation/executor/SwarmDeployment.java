@@ -6,6 +6,7 @@ import org.swarmer.context.DeploymentColor;
 import org.swarmer.context.SwarmJob;
 import org.swarmer.context.SwarmerCtx;
 import org.swarmer.json.SwarmDeploymentCfg;
+import org.swarmer.util.FileUtil;
 import org.swarmer.util.NetUtils;
 
 import java.io.File;
@@ -82,7 +83,7 @@ class SwarmDeployment extends SwarmDeploymentProcessor {
          File fileToRemove = new File(deploymentCfg.getSwarmFilePath());
          if (fileToRemove.exists()) {
             LOG.info("Removing of old deployment swarm file [{}].", fileToRemove.getAbsolutePath());
-            fileToRemove.delete();
+            FileUtil.forceRemoveFile(fileToRemove);
          }
       }
    }
