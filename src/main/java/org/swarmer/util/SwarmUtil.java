@@ -109,7 +109,6 @@ public class SwarmUtil {
 
    public static boolean isJarFileValid(File jarFile) {
       boolean resultJarFileValid = true;
-      LOG.debug("Checking validity of JAR file [{}]", jarFile.getAbsolutePath());
       ZipFile file = null;
       try {
          file = new ZipFile(jarFile);
@@ -122,7 +121,6 @@ public class SwarmUtil {
       } finally {
          CloseableUtil.close(file);
       }
-      LOG.debug("JAR file [{}] is valid: {}", resultJarFileValid);
       return resultJarFileValid;
    }
 
