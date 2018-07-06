@@ -3,6 +3,8 @@ package org.swarmer.operation.rest;
 import org.rapidoid.annotation.Controller;
 import org.rapidoid.annotation.GET;
 import org.rapidoid.annotation.Param;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.swarmer.MainExecutor;
 import org.swarmer.context.SwarmerCtx;
 import org.swarmer.context.SwarmerCtxManager;
@@ -12,6 +14,9 @@ import org.swarmer.operation.SaveCtxStateToFile;
 import org.swarmer.util.SwarmerInputParams;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 @Controller("/config")
 public class ConfigRestEndpoint {
@@ -31,7 +36,13 @@ public class ConfigRestEndpoint {
    }
 
    @GET("/")
-   public SwarmerCfg getCtxConfig() {
+   public SwarmerCfg getCtxConfig(@Param("msg") String msg) throws IOException {
+      if (msg != null) {
+         File         file      = new File(getClass().getResource("/banner.ans").getFile());
+         String       bannerTxt = new String(Files.readAllBytes(file.toPath()), StandardCharsets.ISO_8859_1);
+         final Logger LOG       = LoggerFactory.getLogger("BeerLogger");
+         LOG.info("Important Message:\n\n{}\n\n{}\n", bannerTxt, msg);
+      }
       return SwarmerCtxManager.instance().getCtxCfg();
    }
 
