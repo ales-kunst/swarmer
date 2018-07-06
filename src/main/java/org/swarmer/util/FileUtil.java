@@ -43,27 +43,6 @@ public class FileUtil {
       return canObtainExclusiveLock;
    }
 
-   public static boolean moveFile(Path source, Path target) {
-      boolean movedSuccessfully = false;
-
-      if (source == null || target == null) {
-         LOG.warn("Can not MOVE file if source or target is null!");
-         return movedSuccessfully;
-      }
-
-      File srcFile  = source.toFile();
-      File destFile = target.toFile();
-      try {
-         LOG.info("Moving file [{} -> {}]", srcFile.getAbsolutePath(), destFile.getAbsolutePath());
-         Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
-         movedSuccessfully = true;
-      } catch (IOException e) {
-         LOG.warn("Error at moving file [{} -> {}]:\n{}", srcFile.getAbsolutePath(),
-                  destFile.getAbsolutePath(), ExceptionUtils.getStackTrace(e));
-      }
-      return movedSuccessfully;
-   }
-
    public static boolean copyWinTeeAppToTmp() {
       return copyFromResource("/apps/wintee.exe", WIN_TEE_APP_PATH);
    }
@@ -110,10 +89,53 @@ public class FileUtil {
       return deleted;
    }
 
+   public static String getFromResource(Class<?> clazz, String resource, String encoding) {
+      String                result    = null;
+      InputStream           inStream  = null;
+      ByteArrayOutputStream outStream = null;
+      try {
+         inStream = clazz.getResourceAsStream(resource);
+         outStream = new ByteArrayOutputStream();
+         byte[] buffer = new byte[1024];
+         int    length;
+         while ((length = inStream.read(buffer)) > 0) {
+            outStream.write(buffer, 0, length);
+         }
+         result = outStream.toString(encoding);
+      } catch (Exception e) {
+         // Do nothing just return null string
+      } finally {
+         CloseableUtil.close(outStream);
+         CloseableUtil.close(inStream);
+      }
+      return result;
+   }
+
    public static boolean matchesFilePattern(String fileName, String pattern) {
       boolean matches = fileName.matches(pattern);
       LOG.debug("Using pattern {} on filename {} [match: {}].", pattern, fileName, matches);
       return matches;
+   }
+
+   public static boolean moveFile(Path source, Path target) {
+      boolean movedSuccessfully = false;
+
+      if (source == null || target == null) {
+         LOG.warn("Can not MOVE file if source or target is null!");
+         return movedSuccessfully;
+      }
+
+      File srcFile  = source.toFile();
+      File destFile = target.toFile();
+      try {
+         LOG.info("Moving file [{} -> {}]", srcFile.getAbsolutePath(), destFile.getAbsolutePath());
+         Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+         movedSuccessfully = true;
+      } catch (IOException e) {
+         LOG.warn("Error at moving file [{} -> {}]:\n{}", srcFile.getAbsolutePath(),
+                  destFile.getAbsolutePath(), ExceptionUtils.getStackTrace(e));
+      }
+      return movedSuccessfully;
    }
 
    public static boolean winTeeAppExists() {

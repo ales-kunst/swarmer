@@ -11,12 +11,11 @@ import org.swarmer.context.SwarmerCtxManager;
 import org.swarmer.exception.ExceptionThrower;
 import org.swarmer.json.SwarmerCfg;
 import org.swarmer.operation.SaveCtxStateToFile;
+import org.swarmer.util.FileUtil;
 import org.swarmer.util.SwarmerInputParams;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 
 @Controller("/config")
 public class ConfigRestEndpoint {
@@ -36,10 +35,10 @@ public class ConfigRestEndpoint {
    }
 
    @GET("/")
-   public SwarmerCfg getCtxConfig(@Param("msg") String msg) throws IOException {
+   public SwarmerCfg getCtxConfig(@Param("msg") String msg) {
       if (msg != null) {
-         File         file      = new File(getClass().getResource("/banner.ans").getFile());
-         String       bannerTxt = new String(Files.readAllBytes(file.toPath()), StandardCharsets.ISO_8859_1);
+         String bannerTxt = FileUtil.getFromResource(getClass(), "/banner.ans",
+                                                     StandardCharsets.ISO_8859_1.toString());
          final Logger LOG       = LoggerFactory.getLogger("SwarmerLogger");
          LOG.info("Important Message:\n\n{}\n\n{}\n", bannerTxt, msg);
       }
