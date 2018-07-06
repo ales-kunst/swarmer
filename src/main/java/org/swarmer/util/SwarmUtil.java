@@ -2,6 +2,7 @@ package org.swarmer.util;
 
 import com.ecwid.consul.v1.health.model.Check;
 import org.apache.commons.lang.exception.ExceptionUtils;
+import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -183,16 +184,18 @@ public class SwarmUtil {
       return success;
    }
 
-   public static Process startSwarmInstance(String... command) {
-      Process process = null;
+   public static Pair<Process, String> startSwarmInstance(String... command) {
+      Process process        = null;
+      String  teeLogFilename = null;
       try {
-         String teeLogFilename = getLogFilename(command);
+         teeLogFilename = getLogFilename(command);
          process = new ProcessExecutor().command(command).environment("LOGFILE", teeLogFilename).readOutput(true)
                                         .start().getProcess();
       } catch (Exception e) {
          LOG.error("Error executing startSwarmInstance: {}", ExceptionUtils.getStackTrace(e));
       }
-      return process;
+
+      return new Pair<>(process, teeLogFilename);
    }
 
    private static String getLogFilename(String[] command) {
@@ -214,13 +217,17 @@ public class SwarmUtil {
       return logFilename + ".log";
    }
 
+   public static boolean waitForInSecs(long secs) {
+      return waitFor(secs * 1000);
+   }
+
    public static boolean waitForServiceRegistration(String consulUrl, String serviceName, String serviceId,
-                                                    int appWaitTimeoutSeconds) throws IOException {
+                                                    long appWaitTimeoutSeconds) throws IOException {
       ConsulQuery consulQuery = ConsulQuery.url(consulUrl);
       LOG.debug(
               "|---> Starting Wait for microservice to register on Consul [Servicename: {}; ServiceId: {}; Timeout: {}]",
               serviceName, serviceId, appWaitTimeoutSeconds);
-      Predicate<Integer> waitForServiceRegistrationPred = (Integer time) -> {
+      Predicate<Long> waitForServiceRegistrationPred = (Long time) -> {
          boolean     success            = false;
          final Check swarmInstanceCheck = consulQuery.getSwarmInstance(serviceName, serviceId);
          if ((swarmInstanceCheck != null) && swarmInstanceCheck.getStatus().equals(Check.CheckStatus.PASSING)) {
@@ -236,21 +243,38 @@ public class SwarmUtil {
       return resultRegistered;
    }
 
-   private static boolean waitLoop(Predicate<Integer> predicate, int waitTimeoutInSec) {
-      boolean successfulRun = false;
-      int     timeWaited    = 0;
+   private static boolean waitLoop(Predicate<Long> predicate, long waitTimeoutInSec) {
+      final int defaultExecWait = 1000;
+      return waitLoop(predicate, waitTimeoutInSec, defaultExecWait);
+   }
+
+   private static boolean waitLoop(Predicate<Long> predicate, long waitTimeoutInSec, long nextExecInMillis) {
+      boolean successfulRun       = false;
+      long    startTime           = System.currentTimeMillis();
+      long    timeElapsed         = 0;
+      long    waitTimeoutInMillis = waitTimeoutInSec * 1000;
       while (true) {
-         waitFor(1000);
-         if (predicate.test(timeWaited)) {
+         if (predicate.test(timeElapsed)) {
             successfulRun = true;
             break;
-         } else if (timeWaited > waitTimeoutInSec) {
+         }
+         timeElapsed = System.currentTimeMillis() - startTime;
+         if (timeElapsed > waitTimeoutInMillis) {
             break;
          }
-         timeWaited++;
+         waitFor(nextExecInMillis);
       }
-
+      LOG.debug("Wait loop info [success: {}; elapsed_time: {} ].", successfulRun, timeElapsed);
       return successfulRun;
+   }
+
+   public static boolean waitForValidJar(File jarFile, long waitTimeoutInSec) {
+      boolean isJarValid;
+      LOG.debug("|---> Starting Wait for valid Jar [file: {}; Timeout: {}]", jarFile.getAbsolutePath(),
+                waitTimeoutInSec);
+      isJarValid = waitLoop((Long timeElapsed) -> isJarFileValid(jarFile), waitTimeoutInSec, 3000);
+      LOG.debug("--->| End Wait for valid Jar [file: {}; Success: {}]", jarFile.getAbsolutePath(), isJarValid);
+      return isJarValid;
    }
 
    public static boolean waitFor(long millis) {
@@ -264,10 +288,10 @@ public class SwarmUtil {
       return success;
    }
 
-   public static boolean waitUntilSwarmProcExits(int pid, int shutdownTimeoutSeconds) {
+   public static boolean waitUntilSwarmProcExits(int pid, long shutdownTimeoutInSec) {
       boolean processExited;
       LOG.debug("|---> Starting Wait for Swarm process to exit [PID: {}; Start: {}]", pid, System.currentTimeMillis());
-      processExited = waitLoop((Integer time) -> !pidExists(pid), shutdownTimeoutSeconds);
+      processExited = waitLoop((Long time) -> !pidExists(pid), shutdownTimeoutInSec);
       LOG.debug("--->| End Wait for Swarm process to exit [PID: {}; ProcessExited: {}, End: {}]", pid, processExited,
                 System.currentTimeMillis());
       return processExited;

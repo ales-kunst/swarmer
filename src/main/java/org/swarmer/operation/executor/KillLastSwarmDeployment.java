@@ -31,7 +31,7 @@ public class KillLastSwarmDeployment extends SwarmDeploymentProcessor {
       shutdownSwarmInstance(pid, windowTitle);
       File fileToRemove = new File(lastDeploymentCfg.getSwarmFilePath());
       if (fileToRemove.exists()) {
-         LOG.info("Removing of old deployment swarm file [{}].", fileToRemove.getAbsolutePath());
+         LOG.info("Removing old deployment file [{}].", fileToRemove.getAbsolutePath());
          FileUtil.forceRemoveFile(fileToRemove);
       }
    }

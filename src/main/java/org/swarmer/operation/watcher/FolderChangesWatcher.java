@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.swarmer.context.SwarmJob;
 import org.swarmer.context.SwarmerCtx;
+import org.swarmer.exception.ExceptionThrower;
+import org.swarmer.exception.SwarmerException;
 import org.swarmer.json.DeploymentContainerCfg;
 import org.swarmer.json.SwarmerCfg;
 import org.swarmer.operation.InfiniteLoopOperation;
@@ -43,24 +45,20 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       WatchKey queuedKey = getContext().getWatchService().poll(1000, TimeUnit.MILLISECONDS);
 
       if ((queuedKey != null) && queuedKey.isValid()) {
-         try {
-            processWatchEvents(queuedKey);
-         } catch (Exception e) {
-            LOG.error("Exception from processWatchEvents: [{}]. Continue with watch.", e.getMessage());
-         }
+         processWatchEvents(queuedKey);
          if (!queuedKey.reset()) {
             LOG.warn("WatchKey is closed [{}].", queuedKey.toString());
          }
       }
    }
 
-   private void processWatchEvents(WatchKey queuedKey) {
+   private void processWatchEvents(WatchKey queuedKey) throws SwarmerException {
       // If we do it in this way then we poll current events and remove them from list. Must be done in such a way
       // because every call to this function gets fresh list from event list. Do NOT put queuedKey.pollEvents() in the
       // for loop (e.g. for (WatchEvent<?> watchEvent : queuedKey.pollEvents()) {})
       List<WatchEvent<?>> pollEvents = queuedKey.pollEvents();
-      LOG.info("Started polling watch events [size: {}]: {}", pollEvents.size(),
-               getWatchEventsInfo(queuedKey, pollEvents));
+      LOG.debug("Started polling watch events [size: {}]: {}", pollEvents.size(),
+                getWatchEventsInfo(queuedKey, pollEvents));
       for (WatchEvent<?> watchEvent : pollEvents) {
          Path srcPath = getFullPath(queuedKey, watchEvent);
 
@@ -73,9 +71,9 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
          boolean fileSuccessfullyLocked = isFileSuccessfullyLocked(queuedKey);
 
          if (isValidModifyEvent) {
-            LOG.debug("Event... kind={}, count={}, context={} path={}", watchEvent.kind(), watchEvent.count(),
-                      watchEvent.context(),
-                      srcPath.toFile().getAbsolutePath());
+            LOG.info("Event... kind={}, count={}, context={} path={}", watchEvent.kind(), watchEvent.count(),
+                     watchEvent.context(),
+                     srcPath.toFile().getAbsolutePath());
          }
 
          if (isValidModifyEvent && !fileSuccessfullyLocked) {
@@ -84,7 +82,7 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
             clearFileSuccessfullyLocked(queuedKey);
          }
       }
-      LOG.info("Ended polling watch events [size: {}]\n", pollEvents.size());
+      LOG.debug("Ended polling watch events [size: {}]\n", pollEvents.size());
    }
 
    private String getWatchEventsInfo(WatchKey queuedKey, List<WatchEvent<?>> pollEvents) {
@@ -105,33 +103,69 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       return watchEventFolder.resolve(watchEventFile);
    }
 
-   @Override
-   protected void handleError(Exception exception) {
-      LOG.warn("Exception from processWatchEvents. Continue with watch. Error stacktrace: \n {}",
-               ExceptionUtils.getStackTrace(exception));
-   }
-
-   private File getDestFolder(WatchKey watchKey) {
-      return findDeploymentCfg(watchKey).getDestFolder();
-   }
-
    private String getFilePattern(WatchKey watchKey) {
       return findDeploymentCfg(watchKey).getFilePattern();
    }
 
-   private void clearFileSuccessfullyLocked(WatchKey watchKey) {
-      succesfullyLocked.remove(watchKey.hashCode());
+   private boolean isFileSuccessfullyLocked(WatchKey watchKey) {
+      return succesfullyLocked.contains(watchKey.hashCode());
    }
 
-   private DeploymentContainerCfg findDeploymentCfg(WatchKey watchKey) {
-      for (int index = 0; index < cfg.deploymentContainerCfgsSize(); index++) {
-         DeploymentContainerCfg containerCfg = cfg.getDeploymentContainerCfg(index);
-         String                 hashCode     = Integer.toString(watchKey.hashCode());
-         if (containerCfg.getWatchKeyHash().equals(hashCode)) {
-            return containerCfg;
-         }
+   private void processModifyEvent(WatchKey queuedKey, WatchEvent<?> watchEvent) throws SwarmerException {
+      Path srcPath  = getFullPath(queuedKey, watchEvent);
+      Path destPath = getDestPath(queuedKey, watchEvent);
+
+      boolean canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
+
+      if (!canSrcFileBeLocked) {
+         LOG.trace("Sleep for {} secs.", getContext().getLockWaitTimeout());
+         SwarmUtil.waitForInSecs(getContext().getLockWaitTimeout());
+         canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
       }
-      return null;
+
+      // Remove Dest file only if it exists and src file can be locked
+      boolean destFileCouldNotBeRemoved =
+              (destPath.toFile().exists() && canSrcFileBeLocked) && !FileUtil.forceRemoveFile(destPath);
+      boolean fileAccessConditionsOk = canSrcFileBeLocked && !destFileCouldNotBeRemoved;
+
+      if (!canSrcFileBeLocked) {
+         LOG.warn("File not copied because source file can not be locked.");
+      } else if (destFileCouldNotBeRemoved) {
+         // We have to add that the lock has happened for next two events should be ignored
+         setFileSuccessfullyLocked(queuedKey);
+         LOG.warn("Destination file [{}] is locked by another process.", destPath);
+      } else if (fileAccessConditionsOk) {
+         setFileSuccessfullyLocked(queuedKey);
+         LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
+                  srcPath.toFile().length());
+
+         boolean srcJarFileValid = SwarmUtil.waitForValidJar(srcPath.toFile(), 30);
+         LOG.info("Source file [{}] valid Jar: {}", srcPath.toFile().getAbsolutePath(),
+                  srcJarFileValid);
+
+         FileUtil.moveFile(srcPath, destPath);
+
+         boolean destJarFileValid = SwarmUtil.isJarFileValid(destPath.toFile());
+         LOG.info("Target file [{}] valid Jar: {}", destPath.toFile().getAbsolutePath(),
+                  destJarFileValid);
+
+         if (!destJarFileValid) {
+            ExceptionThrower.throwSwarmerException("Target Jar file ["
+                                                   + destPath.toFile().getAbsolutePath()
+                                                   + "] is NOT valid.");
+         }
+
+         String containerName = getContainerName(queuedKey);
+         getContext().addSwarmJob(SwarmJob.builder()
+                                          .action(SwarmJob.Action.RUN_NEW)
+                                          .containerName(containerName)
+                                          .swarmJarFile(destPath.toFile())
+                                          .build());
+      }
+   }
+
+   private void clearFileSuccessfullyLocked(WatchKey watchKey) {
+      succesfullyLocked.remove(watchKey.hashCode());
    }
 
    private Path getDestPath(WatchKey queuedKey, WatchEvent<?> watchEvent) {
@@ -147,63 +181,29 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       succesfullyLocked.add(watchKey.hashCode());
    }
 
-   private boolean isFileSuccessfullyLocked(WatchKey watchKey) {
-      return succesfullyLocked.contains(watchKey.hashCode());
-   }
-
-   private void processModifyEvent(WatchKey queuedKey, WatchEvent<?> watchEvent) {
-      Path srcPath  = getFullPath(queuedKey, watchEvent);
-      Path destPath = getDestPath(queuedKey, watchEvent);
-
-      boolean canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
-
-      if (!canSrcFileBeLocked) {
-         LOG.trace("Sleep for {} ms", getContext().getLockWaitTimeout());
-         SwarmUtil.waitFor(getContext().getLockWaitTimeout());
-         canSrcFileBeLocked = FileUtil.canObtainExclusiveLock(srcPath);
-      }
-      // Remove Dest file only if it exists and src file can be locked
-      boolean destFileExists =
-              (destPath.toFile().exists() && canSrcFileBeLocked) && !FileUtil.forceRemoveFile(destPath);
-      boolean fileAccessConditionsOk = canSrcFileBeLocked && !destFileExists;
-
-      if (!canSrcFileBeLocked) {
-         LOG.warn("File not copied because source file can not be locked.");
-      } else if (destFileExists) {
-         // We have to add that the lock has happened for next two events should be ignored
-         setFileSuccessfullyLocked(queuedKey);
-         LOG.error("Destination file [{}] is locked by another process.", destPath);
-      } else if (fileAccessConditionsOk) {
-         setFileSuccessfullyLocked(queuedKey);
-         LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
-                  srcPath.toFile().length());
-         boolean srcJarFileValid = SwarmUtil.isJarFileValid(srcPath.toFile());
-         LOG.info("Source file [{}] valid JAR: {}", srcPath.toFile().getAbsolutePath(),
-                  srcJarFileValid);
-
-         FileUtil.copyFile(srcPath.toFile(), destPath.toFile());
-
-         boolean destJarFileValid = SwarmUtil.isJarFileValid(destPath.toFile());
-         LOG.info("Target file [{}] valid JAR: {}", destPath.toFile().getAbsolutePath(),
-                  destJarFileValid);
-         if (!srcJarFileValid || !destJarFileValid) {
-            LOG.warn("Trying to copy file one more time.");
-            FileUtil.copyFile(srcPath.toFile(), destPath.toFile());
-         }
-
-         FileUtil.forceRemoveFile(srcPath.toFile());
-
-         String containerName = getContainerName(queuedKey);
-         getContext().addSwarmJob(SwarmJob.builder()
-                                          .action(SwarmJob.Action.RUN_NEW)
-                                          .containerName(containerName)
-                                          .swarmJarFile(destPath.toFile())
-                                          .build());
-      }
+   private File getDestFolder(WatchKey watchKey) {
+      return findDeploymentCfg(watchKey).getDestFolder();
    }
 
    private String getContainerName(WatchKey watchKey) {
       return findDeploymentCfg(watchKey).getName();
+   }
+
+   private DeploymentContainerCfg findDeploymentCfg(WatchKey watchKey) {
+      for (int index = 0; index < cfg.deploymentContainerCfgsSize(); index++) {
+         DeploymentContainerCfg containerCfg = cfg.getDeploymentContainerCfg(index);
+         String                 hashCode     = Integer.toString(watchKey.hashCode());
+         if (containerCfg.getWatchKeyHash().equals(hashCode)) {
+            return containerCfg;
+         }
+      }
+      return null;
+   }
+
+   @Override
+   protected void handleError(Exception exception) {
+      LOG.warn("Exception from processWatchEvents. Continue with watch. Error stacktrace: \n {}",
+               ExceptionUtils.getStackTrace(exception));
    }
 
    @Override

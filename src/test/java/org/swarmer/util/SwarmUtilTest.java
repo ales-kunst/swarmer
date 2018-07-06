@@ -131,8 +131,8 @@ public class SwarmUtilTest {
       String[] swarmArgs = SwarmUtil.createSwarmCliArguments(WINDOW_NAME,
                                                              "8080", jvmArgs, uid, "",
                                                              jarFile);
-      Process process    = SwarmUtil.startSwarmInstance(swarmArgs);
-      int     timeWaited = 0;
+      SwarmUtil.startSwarmInstance(swarmArgs);
+      int timeWaited = 0;
       while (SwarmUtil.waitFor(1000)) {
          StringBuffer urlContents = NetUtils.getUrlContent("http://localhost:8500/v1/health/service/QnstMS");
          if (!urlContents.toString().equalsIgnoreCase("[]")) {
@@ -161,7 +161,7 @@ public class SwarmUtilTest {
       String[] swarmArgs = SwarmUtil.createSwarmCliArguments(WINDOW_NAME,
                                                              "8080", "-Djava.io.tmpdir=D:\\temp\\some_tmp", uid, "",
                                                              jarFile);
-      Process process    = SwarmUtil.startSwarmInstance(swarmArgs);
+      SwarmUtil.startSwarmInstance(swarmArgs);
       int     timeWaited = 0;
       while (SwarmUtil.waitFor(1000)) {
          if (!NetUtils.isPortAvailable(8080)) {

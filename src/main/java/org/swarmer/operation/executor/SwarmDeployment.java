@@ -60,13 +60,10 @@ class SwarmDeployment extends SwarmDeploymentProcessor {
 
          if (swarmDeployment != null) {
             getCtx().addDeployment(swarmJob().getContainerName(), swarmDeployment);
-            LOG.info("Swarm started!");
             if (colorToRemove != null) {
                shutdownOldDeployment();
                getCtx().clearDeployment(swarmJob().getContainerName(), colorToRemove);
             }
-         } else {
-            LOG.warn("Swarm could not be started! See log rest file!");
          }
       } else {
          String errMsg = String.format("No available ports in the range %s", portRange().toString());
@@ -82,7 +79,7 @@ class SwarmDeployment extends SwarmDeploymentProcessor {
          shutdownSwarmInstance(pid, windowTitle);
          File fileToRemove = new File(deploymentCfg.getSwarmFilePath());
          if (fileToRemove.exists()) {
-            LOG.info("Removing of old deployment swarm file [{}].", fileToRemove.getAbsolutePath());
+            LOG.info("Removing old deployment file [{}].", fileToRemove.getAbsolutePath());
             FileUtil.forceRemoveFile(fileToRemove);
          }
       }

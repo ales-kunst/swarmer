@@ -1,6 +1,7 @@
 package org.swarmer.operation.executor;
 
 import org.apache.commons.lang.math.IntRange;
+import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.swarmer.context.DeploymentColor;
@@ -16,8 +17,7 @@ import java.io.File;
 import java.io.IOException;
 
 public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
-   protected static final int    DEFAULT_LOOP_WAIT_IN_MILLIS     = 1000;
-   protected static final String DEPLOYMENT_COULD_NOT_BE_STOPPED = "Old rest deployment [WindowTitle: %s] could not be stopped! Hard killing window! Manual intervention needed!";
+   protected static final String DEPLOYMENT_COULD_NOT_BE_STOPPED = "Process with PID [{}] could not be stopped. Hard killing window [{}]. Deregister service from Consul manually!";
    private static final   Logger LOG                             = LoggerFactory.getLogger(
            SwarmDeploymentProcessor.class);
 
@@ -65,10 +65,9 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
          swarmExited = SwarmUtil.waitUntilSwarmProcExits(pid, shutdownTimeout);
       }
       if (!swarmExited) {
-         String errMsg = String.format(DEPLOYMENT_COULD_NOT_BE_STOPPED,
-                                       windowTitle);
-         LOG.error(errMsg);
-         LOG.info("Hard killing window [{}]", windowTitle);
+         String warnMsg = String.format(DEPLOYMENT_COULD_NOT_BE_STOPPED,
+                                        pid, windowTitle);
+         LOG.warn(warnMsg);
          SwarmUtil.killSwarmWindow(windowTitle);
       } else {
          LOG.info("Process with PID [{}] successfully SIGINT-ed!", pid);
@@ -92,22 +91,25 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
                                                                 timeStarted,
                                                                 appArgs,
                                                                 copiedJarFile);
-      SwarmUtil.startSwarmInstance(swarmCommand);
-      String serviceId      = getServiceId(port);
-      int    startupTimeout = getCtx().getGeneralCfgData().getSwarmDefaultStartupTime();
+      Pair<Process, String> runSwarmInstanceResult = SwarmUtil.startSwarmInstance(swarmCommand);
+      String                serviceId              = getServiceId(port);
+      int                   startupTimeout         = getCtx().getGeneralCfgData().getSwarmDefaultStartupTime();
       boolean registeredSuccessful = SwarmUtil.waitForServiceRegistration(containerCfg().getConsulUrl(),
                                                                           containerCfg().getConsulServiceName(),
-                                                                          serviceId,
-                                                                          startupTimeout);
+                                                                          serviceId, startupTimeout);
       SwarmDeployment resultDeployment = null;
       if (registeredSuccessful) {
          int pid = SwarmUtil.getSwarmPid(copiedJarFile.getName(), timeStarted);
+         LOG.info("Swarm started [PID: {}; WindowTitle: {}].", pid, windowTitle);
          resultDeployment = SwarmDeployment.builder()
                                            .deploymentColor(colorToDeploy)
                                            .file(copiedJarFile)
                                            .pid(pid)
                                            .windowTitle(windowTitle)
                                            .build();
+      } else {
+         String teeLogFile = runSwarmInstanceResult.getValue1();
+         LOG.warn("Swarm could not be started! See Swarm log file [{}]!", teeLogFile);
       }
 
       return resultDeployment;

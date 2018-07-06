@@ -7,7 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Random;
 
 public class FileUtil {
@@ -42,8 +44,9 @@ public class FileUtil {
       return canObtainExclusiveLock;
    }
 
+   // TODO Delete this method.
    public static boolean copyFile(File source, File target) {
-      boolean isCopySuccess = false;
+      boolean copiedSuccessfully = false;
       /*
       boolean          isCopySuccess = false;
       FileInputStream  inStream      = null;
@@ -52,12 +55,12 @@ public class FileUtil {
       FileChannel      outChannel    = null;
       */
       if (source == null || target == null) {
-         LOG.warn("Can not copy file if source or target is null!");
-         return isCopySuccess;
+         LOG.warn("Can not COPY file if source or target is null!");
+         return copiedSuccessfully;
       }
 
       try {
-         LOG.info("|---> Started copying file [{} -> {}]", source.getAbsolutePath(), target.getAbsolutePath());
+         LOG.info("Copying file [{} -> {}]", source.getAbsolutePath(), target.getAbsolutePath());
          /*
          inStream = new FileInputStream(source);
          outStream = new FileOutputStream(target);
@@ -74,11 +77,10 @@ public class FileUtil {
          }
          */
          FileUtils.copyFile(source, target);
-         LOG.info("--->| Ended copying file [{} -> {}]", source.getAbsolutePath(), target.getAbsolutePath());
-         isCopySuccess = true;
+         copiedSuccessfully = true;
       } catch (IOException e) {
-         LOG.warn("Error at copyFile when copying file [{} -> {}]: ", source.getAbsolutePath(),
-                  target.getAbsolutePath(), e);
+         LOG.warn("Error at copyFile when copying file [{} -> {}]:\n{}", source.getAbsolutePath(),
+                  target.getAbsolutePath(), ExceptionUtils.getStackTrace(e));
       } finally {
          /*
          CloseableUtil.close(inStream);
@@ -88,7 +90,28 @@ public class FileUtil {
          */
       }
 
-      return isCopySuccess;
+      return copiedSuccessfully;
+   }
+
+   public static boolean moveFile(Path source, Path target) {
+      boolean movedSuccessfully = false;
+
+      if (source == null || target == null) {
+         LOG.warn("Can not MOVE file if source or target is null!");
+         return movedSuccessfully;
+      }
+
+      File srcFile  = source.toFile();
+      File destFile = target.toFile();
+      try {
+         LOG.info("Moving file [{} -> {}]", srcFile.getAbsolutePath(), destFile.getAbsolutePath());
+         Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+         movedSuccessfully = true;
+      } catch (IOException e) {
+         LOG.warn("Error at moving file [{} -> {}]:\n{}", srcFile.getAbsolutePath(),
+                  destFile.getAbsolutePath(), ExceptionUtils.getStackTrace(e));
+      }
+      return movedSuccessfully;
    }
 
    public static boolean copyWinTeeAppToTmp() {

@@ -9,13 +9,13 @@
             <level>INFO</level>
         </filter>
         <encoder>
-            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-35logger{1} - %msg%n</pattern>
+            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%-25thread] %-35logger{1} - %msg%n</pattern>
         </encoder>
     </appender>
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-35logger{1} - %msg%n</pattern>
+            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%-25thread] %-35logger{1} - %msg%n</pattern>
         </encoder>
     </appender>
 

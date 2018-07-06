@@ -53,13 +53,10 @@ public class AppendSwarmDeployment extends SwarmDeploymentProcessor {
 
          if (swarmDeployment != null) {
             getCtx().addDeployment(swarmJob().getContainerName(), swarmDeployment);
-            LOG.info("Swarm started!");
-         } else {
-            LOG.error("Swarm could not be started! See log rest file!");
          }
       } else {
-         String errMsg = String.format("No available ports in the range %s", portRange().toString());
-         LOG.error(errMsg);
+         String warnMsg = String.format("No available ports in the range %s", portRange().toString());
+         LOG.warn(warnMsg);
       }
    }
 
