@@ -40,7 +40,7 @@ public class ConfigRestEndpoint {
       if (msg != null) {
          File         file      = new File(getClass().getResource("/banner.ans").getFile());
          String       bannerTxt = new String(Files.readAllBytes(file.toPath()), StandardCharsets.ISO_8859_1);
-         final Logger LOG       = LoggerFactory.getLogger("BeerLogger");
+         final Logger LOG       = LoggerFactory.getLogger("SwarmerLogger");
          LOG.info("Important Message:\n\n{}\n\n{}\n", bannerTxt, msg);
       }
       return SwarmerCtxManager.instance().getCtxCfg();
