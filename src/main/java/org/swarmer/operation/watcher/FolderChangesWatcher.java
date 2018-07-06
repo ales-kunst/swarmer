@@ -136,8 +136,6 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
          LOG.warn("Destination file [{}] is locked by another process.", destPath);
       } else if (fileAccessConditionsOk) {
          setFileSuccessfullyLocked(queuedKey);
-         LOG.info("File [{}] ready for copying [size: {}]", srcPath.toString(),
-                  srcPath.toFile().length());
 
          boolean srcJarFileValid = SwarmUtil.waitForValidJar(srcPath.toFile(), 30);
          LOG.info("Source file [{}] valid Jar: {}", srcPath.toFile().getAbsolutePath(),

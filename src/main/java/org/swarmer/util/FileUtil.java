@@ -22,7 +22,7 @@ public class FileUtil {
       File    sourceFile             = source != null ? source.toFile() : null;
 
       if (source == null) {
-         LOG.error("Can not obtain lock on null source in canObtainExclusiveLock.");
+         LOG.warn("Can NOT obtain lock on NULL source in canObtainExclusiveLock.");
       } else {
          try {
             Random randomGenerator = new Random();
@@ -37,7 +37,7 @@ public class FileUtil {
                LOG.warn("File [{}] COULD NOT BE EXCLUSIVELY LOCKED.", sourceFile.getAbsolutePath());
             }
          } catch (Exception e) {
-            LOG.error("Error when canObtainExclusiveLock: {}", e);
+            LOG.warn("Error when canObtainExclusiveLock: {}", e);
          }
       }
 
