@@ -15,13 +15,6 @@
             </includes>
         </fileSet>
         <fileSet>
-            <directory>${project.basedir}/src/main/resources</directory>
-            <outputDirectory></outputDirectory>
-            <includes>
-                <include>version.txt</include>
-            </includes>
-        </fileSet>
-        <fileSet>
             <directory>${project.basedir}/src/test/resources</directory>
             <outputDirectory>conf</outputDirectory>
             <includes>

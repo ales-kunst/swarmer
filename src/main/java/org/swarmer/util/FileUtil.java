@@ -131,7 +131,7 @@ public class FileUtil {
             outStream.write(buffer, 0, length);
          }
       } catch (Exception e) {
-         LOG.debug("Error executing copyAppToTmp: {}", e);
+         LOG.debug("Error executing copyAppToTmp: {}", ExceptionUtils.getStackTrace(e));
          success = false;
       }
       CloseableUtil.close(inStream);
