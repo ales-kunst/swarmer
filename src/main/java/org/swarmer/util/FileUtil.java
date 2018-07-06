@@ -1,7 +1,6 @@
 package org.swarmer.util;
 
 import org.apache.commons.io.FileDeleteStrategy;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,55 +43,6 @@ public class FileUtil {
       return canObtainExclusiveLock;
    }
 
-   // TODO Delete this method.
-   public static boolean copyFile(File source, File target) {
-      boolean copiedSuccessfully = false;
-      /*
-      boolean          isCopySuccess = false;
-      FileInputStream  inStream      = null;
-      FileOutputStream outStream     = null;
-      FileChannel      inChannel     = null;
-      FileChannel      outChannel    = null;
-      */
-      if (source == null || target == null) {
-         LOG.warn("Can not COPY file if source or target is null!");
-         return copiedSuccessfully;
-      }
-
-      try {
-         LOG.info("Copying file [{} -> {}]", source.getAbsolutePath(), target.getAbsolutePath());
-         /*
-         inStream = new FileInputStream(source);
-         outStream = new FileOutputStream(target);
-         inChannel = inStream.getChannel();
-         outChannel = outStream.getChannel();
-
-         ByteBuffer buffer = ByteBuffer.allocateDirect(8192);
-         while (inChannel.read(buffer) != -1) {
-            buffer.flip();
-            while (buffer.hasRemaining()) {
-               outChannel.write(buffer);
-            }
-            buffer.clear();
-         }
-         */
-         FileUtils.copyFile(source, target);
-         copiedSuccessfully = true;
-      } catch (IOException e) {
-         LOG.warn("Error at copyFile when copying file [{} -> {}]:\n{}", source.getAbsolutePath(),
-                  target.getAbsolutePath(), ExceptionUtils.getStackTrace(e));
-      } finally {
-         /*
-         CloseableUtil.close(inStream);
-         CloseableUtil.close(outStream);
-         CloseableUtil.close(inChannel);
-         CloseableUtil.close(outChannel);
-         */
-      }
-
-      return copiedSuccessfully;
-   }
-
    public static boolean moveFile(Path source, Path target) {
       boolean movedSuccessfully = false;
 
@@ -115,23 +65,23 @@ public class FileUtil {
    }
 
    public static boolean copyWinTeeAppToTmp() {
-      return copyAppToTmp("/apps/wintee.exe", WIN_TEE_APP_PATH);
+      return copyFromResource("/apps/wintee.exe", WIN_TEE_APP_PATH);
    }
 
-   private static boolean copyAppToTmp(String resourcePath, String targetpath) {
+   private static boolean copyFromResource(String resourcePath, String targetPath) {
       boolean      success   = true;
       InputStream  inStream  = null;
       OutputStream outStream = null;
       try {
          inStream = FileUtil.class.getResourceAsStream(resourcePath);
-         outStream = new FileOutputStream(targetpath);
+         outStream = new FileOutputStream(targetPath);
          byte[] buffer = new byte[1024];
          int    length;
          while ((length = inStream.read(buffer)) > 0) {
             outStream.write(buffer, 0, length);
          }
       } catch (Exception e) {
-         LOG.debug("Error executing copyAppToTmp: {}", ExceptionUtils.getStackTrace(e));
+         LOG.debug("Error executing copyFromResource: {}", ExceptionUtils.getStackTrace(e));
          success = false;
       }
       CloseableUtil.close(inStream);
@@ -140,7 +90,7 @@ public class FileUtil {
    }
 
    public static boolean copyWindowsKillAppToTmp() {
-      return copyAppToTmp("/apps/windows-kill.exe", KILL_APP_PATH);
+      return copyFromResource("/apps/windows-kill.exe", KILL_APP_PATH);
    }
 
    public static boolean forceRemoveFile(Path source) {

@@ -138,20 +138,12 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
          setFileSuccessfullyLocked(queuedKey);
 
          boolean srcJarFileValid = SwarmUtil.waitForValidJar(srcPath.toFile(), 30);
-         LOG.info("Source file [{}] valid Jar: {}", srcPath.toFile().getAbsolutePath(),
-                  srcJarFileValid);
+         logJarFileValid("Source", destPath.toFile(), srcJarFileValid);
 
          FileUtil.moveFile(srcPath, destPath);
 
          boolean destJarFileValid = SwarmUtil.isJarFileValid(destPath.toFile());
-         LOG.info("Target file [{}] valid Jar: {}", destPath.toFile().getAbsolutePath(),
-                  destJarFileValid);
-
-         if (!destJarFileValid) {
-            ExceptionThrower.throwSwarmerException("Target Jar file ["
-                                                   + destPath.toFile().getAbsolutePath()
-                                                   + "] is NOT valid.");
-         }
+         logJarFileValid("Target", destPath.toFile(), destJarFileValid);
 
          String containerName = getContainerName(queuedKey);
          getContext().addSwarmJob(SwarmJob.builder()
@@ -159,6 +151,18 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
                                           .containerName(containerName)
                                           .swarmJarFile(destPath.toFile())
                                           .build());
+      }
+   }
+
+   private void logJarFileValid(String prefix, File jarFile, boolean jarValid) throws SwarmerException {
+      if (jarValid) {
+         LOG.info("{} file [{}] valid Jar: {}", prefix, jarFile.getAbsolutePath(),
+                  jarValid);
+      } else {
+         ExceptionThrower.throwSwarmerException(prefix
+                                                + " Jar file ["
+                                                + jarFile.getAbsolutePath()
+                                                + "] is NOT valid.");
       }
    }
 
