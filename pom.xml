@@ -132,7 +132,7 @@
         <executions>
           <execution>
             <id>write-text-files</id>
-            <phase>prepare-package</phase>
+            <phase>generate-sources</phase>
             <goals>
               <goal>write-text-files</goal>
             </goals>

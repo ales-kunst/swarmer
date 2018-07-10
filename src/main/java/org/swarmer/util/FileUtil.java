@@ -80,7 +80,7 @@ public class FileUtil {
       boolean deleted = false;
       try {
          FileDeleteStrategy.FORCE.delete(file);
-         LOG.debug("File [{}] could SUCCESSFULLY removed.", file.getAbsolutePath());
+         LOG.debug("File [{}] could be SUCCESSFULLY removed.", file.getAbsolutePath());
          deleted = true;
       } catch (IOException ioe) {
          LOG.warn("File [{}] could NOT be removed:\n{}", file.getAbsolutePath(), ExceptionUtils.getFullStackTrace(ioe));

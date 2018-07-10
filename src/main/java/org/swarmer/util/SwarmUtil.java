@@ -1,6 +1,7 @@
 package org.swarmer.util;
 
 import com.ecwid.consul.v1.health.model.Check;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
@@ -22,17 +23,18 @@ import java.util.zip.ZipFile;
 
 
 public class SwarmUtil {
-   public static final  String UID_JVM_ARG           = "-Duid=";
-   private static final String APP_ARG_DELIMETER     = " ";
-   private static final String CMD_COMMAND           = "cmd.exe";
-   private static final String JAR_OPTION            = "-jar";
-   private static final String JAVA_COMMAND          = "java";
-   private static final String JVM_ARG_DELIMETER     = "-D";
-   private static final String JVM_SWARM_PORT_OPTION = "-Dswarm.http.port=";
-   private static final Logger LOG                   = LoggerFactory.getLogger(SwarmUtil.class);
-   private static final String RUN_COMMAND_OPTION    = "/c";
-   private static final String START_COMMAND         = "start";
-   private static final String START_PATH_OPTION     = "/D";
+   public static final  ObjectMapper JSON_MAPPER           = new ObjectMapper();
+   public static final  String       UID_JVM_ARG           = "-Duid=";
+   private static final String       APP_ARG_DELIMETER     = " ";
+   private static final String       CMD_COMMAND           = "cmd.exe";
+   private static final String       JAR_OPTION            = "-jar";
+   private static final String       JAVA_COMMAND          = "java";
+   private static final String       JVM_ARG_DELIMETER     = "-D";
+   private static final String       JVM_SWARM_PORT_OPTION = "-Dswarm.http.port=";
+   private static final Logger       LOG                   = LoggerFactory.getLogger(SwarmUtil.class);
+   private static final String       RUN_COMMAND_OPTION    = "/c";
+   private static final String       START_COMMAND         = "start";
+   private static final String       START_PATH_OPTION     = "/D";
 
    public static String[] createSwarmCliArguments(String windowTitle, String port, String jvmArgs, long uid,
                                                   String appArgs,
@@ -107,23 +109,6 @@ public class SwarmUtil {
       return pid;
    }
 
-   public static boolean isJarFileValid(File jarFile) {
-      boolean resultJarFileValid = true;
-      ZipFile file = null;
-      try {
-         file = new ZipFile(jarFile);
-         Enumeration<? extends ZipEntry> entries = file.entries();
-         while (entries.hasMoreElements()) {
-            entries.nextElement();
-         }
-      } catch (Exception ex) {
-         resultJarFileValid = false;
-      } finally {
-         CloseableUtil.close(file);
-      }
-      return resultJarFileValid;
-   }
-
    public static boolean javaProcessStatusToolExists() {
       boolean               success = true;
       Future<ProcessResult> future  = null;
@@ -147,18 +132,36 @@ public class SwarmUtil {
       return success;
    }
 
+   public static boolean isJarFileValid(File jarFile) {
+      boolean resultJarFileValid = true;
+      ZipFile file               = null;
+      try {
+         file = new ZipFile(jarFile);
+         Enumeration<? extends ZipEntry> entries = file.entries();
+         while (entries.hasMoreElements()) {
+            entries.nextElement();
+         }
+      } catch (Exception ex) {
+         resultJarFileValid = false;
+      } finally {
+         CloseableUtil.close(file);
+      }
+      return resultJarFileValid;
+   }
+
    public static boolean killSwarmWindow(String windowName) {
       boolean       success       = true;
       ProcessResult processResult = null;
       try {
+         LOG.info("Sending SIGKILL to process with WindowTitle [{}]", windowName);
          String filter = "\"WindowTitle eq " + windowName + "*\"";
          // taskkill /FI "WindowTitle eq Administrator:  CALCULATOR GREEN*"
          Future<ProcessResult> future = new ProcessExecutor().command("taskkill", "/FI", filter).readOutput(true)
                                                              .start().getFuture();
          processResult = future.get(60, TimeUnit.SECONDS);
-         LOG.info(processResult.outputUTF8());
+         logExtApp("taskkill.exe", processResult.outputUTF8(), processResult.getExitValue());
       } catch (Exception e) {
-         LOG.error("Error executing killSwarmWindow: {}", ExceptionUtils.getStackTrace(e));
+         LOG.error("Error executing killSwarmWindow:\n{}", ExceptionUtils.getStackTrace(e));
       }
       if (processResult == null || processResult.getExitValue() != 0) {
          success = false;
@@ -166,20 +169,14 @@ public class SwarmUtil {
       return success;
    }
 
-   public static boolean sigIntSwarm(int pid) {
-      boolean               success = false;
-      Future<ProcessResult> future;
-      try {
-         future = new ProcessExecutor().command(FileUtil.KILL_APP_PATH, "-SIGINT", Integer.toString(pid))
-                                       .readOutput(true).start().getFuture();
-         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
-         if (processResult.getExitValue() == 0) {
-            success = true;
-         }
-      } catch (Exception e) {
-         LOG.error("Error executing getSwarmPid: {}", ExceptionUtils.getStackTrace(e));
-      }
-      return success;
+   private static void logExtApp(String appName, String stdOut, int exitValue) {
+      StringBuffer sb = new StringBuffer();
+      sb.append("Ext App [{}] Info:\n");
+      sb.append("--------------------------------------------------\n");
+      sb.append("[StdOut]\n{}\n[/StdOut]\n");
+      sb.append("Rc: {}\n");
+      sb.append("--------------------------------------------------");
+      LOG.debug(sb.toString(), appName, stdOut, exitValue);
    }
 
    public static Pair<Process, String> startSwarmInstance(String... command) {
@@ -215,30 +212,38 @@ public class SwarmUtil {
       return logFilename + ".log";
    }
 
-   public static boolean waitForInSecs(long secs) {
-      return waitFor(secs * 1000);
-   }
-
-   public static boolean waitForServiceRegistration(String consulUrl, String serviceName, String serviceId,
-                                                    long appWaitTimeoutSeconds) throws IOException {
-      ConsulQuery consulQuery = ConsulQuery.url(consulUrl);
-      LOG.debug(
-              "|---> Starting Wait for microservice to register on Consul [Servicename: {}; ServiceId: {}; Timeout: {}]",
-              serviceName, serviceId, appWaitTimeoutSeconds);
-      Predicate<Long> waitForServiceRegistrationPred = (Long time) -> {
-         boolean     success            = false;
-         final Check swarmInstanceCheck = consulQuery.getSwarmInstance(serviceName, serviceId);
-         if ((swarmInstanceCheck != null) && swarmInstanceCheck.getStatus().equals(Check.CheckStatus.PASSING)) {
+   public static boolean sigIntSwarm(int pid) {
+      boolean               success = false;
+      Future<ProcessResult> future;
+      try {
+         LOG.info("Sending SIGINT to process with PID [{}]", pid);
+         future = new ProcessExecutor().command(FileUtil.KILL_APP_PATH, "-SIGINT", Integer.toString(pid))
+                                       .readOutput(true).start().getFuture();
+         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
+         logExtApp("windows-kill.exe", processResult.outputUTF8(), processResult.getExitValue());
+         if (processResult.getExitValue() == 0) {
             success = true;
          }
+      } catch (Exception e) {
+         LOG.error("Error executing sigIntSwarm:\n{}", ExceptionUtils.getStackTrace(e));
+      }
+      return success;
+   }
 
-         return success;
-      };
-      boolean resultRegistered = waitLoop(waitForServiceRegistrationPred, appWaitTimeoutSeconds);
-      LOG.debug("--->| End Wait for microservice to register on Consul [Servicename: {}; ServiceId: {}; Success: {}]",
-                serviceName, serviceId, resultRegistered);
-
-      return resultRegistered;
+   public static void waitForCriticalServicesDeregistration(String consulUrl, String serviceName,
+                                                            long appWaitTimeoutSeconds) {
+      try {
+         final ConsulQuery consulQuery = ConsulQuery.url(consulUrl);
+         LOG.debug(
+                 "|---> Starting Wait for Deregistering of Critical Services on Consul [Servicename: {}; Timeout: {}]",
+                 serviceName, appWaitTimeoutSeconds);
+         boolean anyServiceUnregistered = waitLoop((Long time) -> consulQuery.deregisterCriticalServices(serviceName),
+                                                   appWaitTimeoutSeconds);
+         LOG.debug("--->| End Wait for Deregistering of Critical Services on Consul [Servicename: {}; Success: {}]",
+                   serviceName, anyServiceUnregistered);
+      } catch (IOException ioe) {
+         LOG.warn("There was an error in ConsulClient:\n {}", ExceptionUtils.getStackTrace(ioe));
+      }
    }
 
    private static boolean waitLoop(Predicate<Long> predicate, long waitTimeoutInSec) {
@@ -266,15 +271,6 @@ public class SwarmUtil {
       return successfulRun;
    }
 
-   public static boolean waitForValidJar(File jarFile, long waitTimeoutInSec) {
-      boolean isJarValid;
-      LOG.debug("|---> Starting Wait for valid Jar [file: {}; Timeout: {}]", jarFile.getAbsolutePath(),
-                waitTimeoutInSec);
-      isJarValid = waitLoop((Long timeElapsed) -> isJarFileValid(jarFile), waitTimeoutInSec, 3000);
-      LOG.debug("--->| End Wait for valid Jar [file: {}; Success: {}]", jarFile.getAbsolutePath(), isJarValid);
-      return isJarValid;
-   }
-
    public static boolean waitFor(long millis) {
       boolean success = true;
       try {
@@ -284,6 +280,40 @@ public class SwarmUtil {
       }
 
       return success;
+   }
+
+   public static boolean waitForInSecs(long secs) {
+      return waitFor(secs * 1000);
+   }
+
+   public static boolean waitForValidJar(File jarFile, long waitTimeoutInSec) {
+      boolean isJarValid;
+      LOG.debug("|---> Starting Wait for valid Jar [file: {}; Timeout: {}]", jarFile.getAbsolutePath(),
+                waitTimeoutInSec);
+      isJarValid = waitLoop((Long timeElapsed) -> isJarFileValid(jarFile), waitTimeoutInSec, 3000);
+      LOG.debug("--->| End Wait for valid Jar [file: {}; Success: {}]", jarFile.getAbsolutePath(), isJarValid);
+      return isJarValid;
+   }
+
+   public static boolean waitForServiceRegistration(String consulUrl, String serviceName, String serviceId,
+                                                    long appWaitTimeoutSeconds) throws IOException {
+      ConsulQuery consulQuery = ConsulQuery.url(consulUrl);
+      LOG.debug("|---> Starting Wait for Service Registering on Consul [Servicename: {}; ServiceId: {}; Timeout: {}]",
+                serviceName, serviceId, appWaitTimeoutSeconds);
+      Predicate<Long> waitForServiceRegistrationPred = (Long time) -> {
+         boolean     success            = false;
+         final Check swarmInstanceCheck = consulQuery.getServiceCheck(serviceName, serviceId);
+         if ((swarmInstanceCheck != null) && swarmInstanceCheck.getStatus().equals(Check.CheckStatus.PASSING)) {
+            success = true;
+         }
+
+         return success;
+      };
+      boolean resultRegistered = waitLoop(waitForServiceRegistrationPred, appWaitTimeoutSeconds);
+      LOG.debug("--->| End Wait for Service Registering on Consul [Servicename: {}; ServiceId: {}; Success: {}]",
+                serviceName, serviceId, resultRegistered);
+
+      return resultRegistered;
    }
 
    public static boolean waitUntilSwarmProcExits(int pid, long shutdownTimeoutInSec) {

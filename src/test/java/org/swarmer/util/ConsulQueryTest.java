@@ -15,7 +15,7 @@ public class ConsulQueryTest {
          // Let checks them in occasionally, and get a list of healthy nodes.
          for (int index = 0; index < 100; index++) {
             System.out.println("Checking in....");
-            final List<EndpointDefinition> serviceDefinitions = consulQuery.getAllSwarmInstances(serviceName);
+            final List<EndpointDefinition> serviceDefinitions = consulQuery.getPassingServices(serviceName);
             serviceDefinitions.forEach(def -> System.out.println("Service: " + def));
             Sys.sleep(10_000);
          }

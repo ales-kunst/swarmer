@@ -12,8 +12,7 @@ import org.swarmer.util.NetUtils;
 import java.io.File;
 
 class SwarmDeployment extends SwarmDeploymentProcessor {
-   private static final Logger          LOG = LoggerFactory.getLogger(
-           SwarmDeployment.class);
+   private static final Logger          LOG = LoggerFactory.getLogger(SwarmDeployment.class);
    // Local variables
    private              DeploymentColor colorToDeploy;
    private              DeploymentColor colorToRemove;
@@ -76,7 +75,8 @@ class SwarmDeployment extends SwarmDeploymentProcessor {
          SwarmDeploymentCfg deploymentCfg = containerCfg().getSwarmDeploymentCfg(index);
          int                pid           = deploymentCfg.getPid();
          String             windowTitle   = deploymentCfg.getWindowTitle();
-         shutdownSwarmInstance(pid, windowTitle);
+
+         shutdownSwarmInstance(containerCfg().getConsulUrl(), containerCfg().getConsulServiceName(), pid, windowTitle);
          File fileToRemove = new File(deploymentCfg.getSwarmFilePath());
          if (fileToRemove.exists()) {
             LOG.info("Removing old deployment file [{}].", fileToRemove.getAbsolutePath());

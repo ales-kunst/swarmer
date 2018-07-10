@@ -17,8 +17,7 @@ import java.io.File;
 import java.io.IOException;
 
 public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
-   protected static final String DEPLOYMENT_COULD_NOT_BE_STOPPED = "Process with PID [{}] could not be stopped. Hard killing window [{}]. Deregister service from Consul manually!";
-   private static final   Logger LOG                             = LoggerFactory.getLogger(
+   private static final Logger LOG = LoggerFactory.getLogger(
            SwarmDeploymentProcessor.class);
 
    // Local variables
@@ -56,21 +55,21 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
       return portRange;
    }
 
-   protected void shutdownSwarmInstance(int pid, String windowTitle) {
-      boolean processSigInted = (pid != -1) && SwarmUtil.sigIntSwarm(pid);
+   protected void shutdownSwarmInstance(String consulUrl, String serviceName, int pid, String windowTitle) {
       boolean swarmExited     = false;
+      boolean processSigInted = (pid != -1) && SwarmUtil.sigIntSwarm(pid);
       if (processSigInted) {
-         LOG.info("Trying to SIGINT process with PID [{}]", pid);
          int shutdownTimeout = getCtx().getGeneralCfgData().getLockWaitTimeout();
          swarmExited = SwarmUtil.waitUntilSwarmProcExits(pid, shutdownTimeout);
       }
       if (!swarmExited) {
-         String warnMsg = String.format(DEPLOYMENT_COULD_NOT_BE_STOPPED,
-                                        pid, windowTitle);
-         LOG.warn(warnMsg);
+         String warnMsg = "Process with PID [{}] could not be stopped."
+                          + " Hard killing window [{}].";
+         LOG.warn(warnMsg, pid, windowTitle);
          SwarmUtil.killSwarmWindow(windowTitle);
+         SwarmUtil.waitForCriticalServicesDeregistration(consulUrl, serviceName, 10);
       } else {
-         LOG.info("Process with PID [{}] successfully SIGINT-ed!", pid);
+         LOG.info("SIGINT successfully sent to process with PID [{}].", pid);
       }
    }
 
