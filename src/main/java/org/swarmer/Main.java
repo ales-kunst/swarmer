@@ -30,8 +30,8 @@ public class Main {
       boolean finishedWithError = false;
       try {
          System.out.println("\n" + getInfoTxt());
-
          startHsqldb();
+         SwarmerInputParams.setLogfilePathSystemProperty();
          URL logConffile = Main.class.getResource("/logback-conf.xml");
          initLogConfiguration(logConffile);
 
