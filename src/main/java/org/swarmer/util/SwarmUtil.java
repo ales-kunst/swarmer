@@ -132,23 +132,6 @@ public class SwarmUtil {
       return success;
    }
 
-   public static boolean isJarFileValid(File jarFile) {
-      boolean resultJarFileValid = true;
-      ZipFile file               = null;
-      try {
-         file = new ZipFile(jarFile);
-         Enumeration<? extends ZipEntry> entries = file.entries();
-         while (entries.hasMoreElements()) {
-            entries.nextElement();
-         }
-      } catch (Exception ex) {
-         resultJarFileValid = false;
-      } finally {
-         CloseableUtil.close(file);
-      }
-      return resultJarFileValid;
-   }
-
    public static boolean killSwarmWindow(String windowName) {
       boolean       success       = true;
       ProcessResult processResult = null;
@@ -177,6 +160,29 @@ public class SwarmUtil {
       sb.append("Rc: {}\n");
       sb.append("--------------------------------------------------");
       LOG.debug(sb.toString(), appName, stdOut, exitValue);
+   }
+
+   public static boolean sigIntSwarm(int pid) {
+      final String          SIGINT_SUCCESS_STDOUT_TEXT = "Signal sent successfuly.";
+      boolean               success                    = false;
+      Future<ProcessResult> future;
+      try {
+         LOG.info("Sending SIGINT to process with PID [{}]", pid);
+         future = new ProcessExecutor().command(FileUtil.KILL_APP_PATH, "-SIGINT", Integer.toString(pid))
+                                       .readOutput(true).start().getFuture();
+         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
+         String        stdOut        = processResult.outputUTF8();
+         boolean       sigIntSuccess = stdOut.contains(SIGINT_SUCCESS_STDOUT_TEXT);
+         // Success is 0 and Error is 8
+         int exitValue = sigIntSuccess ? 0 : 8;
+
+         logExtApp("windows-kill.exe", stdOut, exitValue);
+         success = exitValue == 0;
+
+      } catch (Exception e) {
+         LOG.error("Error executing sigIntSwarm:\n{}", ExceptionUtils.getStackTrace(e));
+      }
+      return success;
    }
 
    public static Pair<Process, String> startSwarmInstance(String... command) {
@@ -210,24 +216,6 @@ public class SwarmUtil {
       logFilename = logFilename + (uidArg != null ? uidArg : System.currentTimeMillis());
 
       return logFilename + ".log";
-   }
-
-   public static boolean sigIntSwarm(int pid) {
-      boolean               success = false;
-      Future<ProcessResult> future;
-      try {
-         LOG.info("Sending SIGINT to process with PID [{}]", pid);
-         future = new ProcessExecutor().command(FileUtil.KILL_APP_PATH, "-SIGINT", Integer.toString(pid))
-                                       .readOutput(true).start().getFuture();
-         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
-         logExtApp("windows-kill.exe", processResult.outputUTF8(), processResult.getExitValue());
-         if (processResult.getExitValue() == 0) {
-            success = true;
-         }
-      } catch (Exception e) {
-         LOG.error("Error executing sigIntSwarm:\n{}", ExceptionUtils.getStackTrace(e));
-      }
-      return success;
    }
 
    public static void waitForCriticalServicesDeregistration(String consulUrl, String serviceName,
@@ -286,15 +274,6 @@ public class SwarmUtil {
       return waitFor(secs * 1000);
    }
 
-   public static boolean waitForValidJar(File jarFile, long waitTimeoutInSec) {
-      boolean isJarValid;
-      LOG.debug("|---> Starting Wait for valid Jar [file: {}; Timeout: {}]", jarFile.getAbsolutePath(),
-                waitTimeoutInSec);
-      isJarValid = waitLoop((Long timeElapsed) -> isJarFileValid(jarFile), waitTimeoutInSec, 3000);
-      LOG.debug("--->| End Wait for valid Jar [file: {}; Success: {}]", jarFile.getAbsolutePath(), isJarValid);
-      return isJarValid;
-   }
-
    public static boolean waitForServiceRegistration(String consulUrl, String serviceName, String serviceId,
                                                     long appWaitTimeoutSeconds) throws IOException {
       ConsulQuery consulQuery = ConsulQuery.url(consulUrl);
@@ -314,6 +293,32 @@ public class SwarmUtil {
                 serviceName, serviceId, resultRegistered);
 
       return resultRegistered;
+   }
+
+   public static boolean waitForValidJar(File jarFile, long waitTimeoutInSec) {
+      boolean isJarValid;
+      LOG.debug("|---> Starting Wait for valid Jar [file: {}; Timeout: {}]", jarFile.getAbsolutePath(),
+                waitTimeoutInSec);
+      isJarValid = waitLoop((Long timeElapsed) -> isJarFileValid(jarFile), waitTimeoutInSec, 3000);
+      LOG.debug("--->| End Wait for valid Jar [file: {}; Success: {}]", jarFile.getAbsolutePath(), isJarValid);
+      return isJarValid;
+   }
+
+   public static boolean isJarFileValid(File jarFile) {
+      boolean resultJarFileValid = true;
+      ZipFile file               = null;
+      try {
+         file = new ZipFile(jarFile);
+         Enumeration<? extends ZipEntry> entries = file.entries();
+         while (entries.hasMoreElements()) {
+            entries.nextElement();
+         }
+      } catch (Exception ex) {
+         resultJarFileValid = false;
+      } finally {
+         CloseableUtil.close(file);
+      }
+      return resultJarFileValid;
    }
 
    public static boolean waitUntilSwarmProcExits(int pid, long shutdownTimeoutInSec) {
