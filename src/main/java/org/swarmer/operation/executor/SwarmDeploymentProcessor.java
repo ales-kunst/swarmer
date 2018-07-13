@@ -83,7 +83,6 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
       String jvmArgs = containerCfg().getJvmParams();
       String appArgs = containerCfg().getAppParams();
 
-      // SwarmFile swarmJarFile = deploymentContainer.findFirstSwarmFileWithState(SwarmFile.State.COPIED);
       long timeStarted = System.currentTimeMillis();
       String[] swarmCommand = SwarmUtil.createSwarmCliArguments(windowTitle,
                                                                 Integer.toString(port),

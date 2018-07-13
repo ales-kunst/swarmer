@@ -21,4 +21,6 @@ public class CloseableUtil {
       }
       return isSuccessfull;
    }
+
+   private CloseableUtil() {}
 }

@@ -53,8 +53,7 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
 
    public SwarmerCfg.GeneralData getGeneralCfgData() {
       try {
-         SwarmerCfg.GeneralData generalData = (SwarmerCfg.GeneralData) swarmerCfgGeneralData.clone();
-         return generalData;
+         return (SwarmerCfg.GeneralData) swarmerCfgGeneralData.clone();
       } catch (Exception e) {
          LOG.error("Error in getGeneralCfgData: {}", ExceptionUtils.getFullStackTrace(e));
       }

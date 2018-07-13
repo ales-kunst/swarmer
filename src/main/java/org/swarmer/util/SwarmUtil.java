@@ -23,12 +23,13 @@ import java.util.zip.ZipFile;
 
 
 public class SwarmUtil {
-   public static final  ObjectMapper JSON_MAPPER           = new ObjectMapper();
+   public static final  String       JPS_EXE               = "jps.exe";
    public static final  String       UID_JVM_ARG           = "-Duid=";
    private static final String       APP_ARG_DELIMETER     = " ";
    private static final String       CMD_COMMAND           = "cmd.exe";
    private static final String       JAR_OPTION            = "-jar";
    private static final String       JAVA_COMMAND          = "java";
+   public static final  ObjectMapper JSON_MAPPER           = new ObjectMapper();
    private static final String       JVM_ARG_DELIMETER     = "-D";
    private static final String       JVM_SWARM_PORT_OPTION = "-Dswarm.http.port=";
    private static final Logger       LOG                   = LoggerFactory.getLogger(SwarmUtil.class);
@@ -60,24 +61,11 @@ public class SwarmUtil {
       return cliArgs.toArray(new String[cliArgs.size()]);
    }
 
-   private static List<String> parseArgs(String args, String delimiter) {
-      List<String> resultArgs = new ArrayList<>();
-      Scanner      sc         = new Scanner(args).useDelimiter(delimiter);
-      String       arg;
-
-      while (sc.hasNext()) {
-         arg = delimiter + sc.next();
-         resultArgs.add(arg.trim());
-      }
-      CloseableUtil.close(sc);
-      return resultArgs;
-   }
-
    public static int getSwarmPid(String swarmJar, long uid) {
       int                   pid = -1;
       Future<ProcessResult> future;
       try {
-         future = new ProcessExecutor().command("jps.exe", "-mlv").readOutput(true)
+         future = new ProcessExecutor().command(JPS_EXE, "-mlv").readOutput(true)
                                        .start().getFuture();
          ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
          pid = parsePid(processResult.outputUTF8(), swarmJar, uid);
@@ -95,18 +83,34 @@ public class SwarmUtil {
       }
 
       LOG.debug("Searching Swarm PID with UID [{}] in content:\n {}", uid, content);
-      Scanner sc   = new Scanner(content);
-      String  line = null;
-      while (sc.hasNextLine() || (line == null)) {
-         line = sc.nextLine();
-         if (line.contains(swarmJar) && line.contains("-Duid=" + uid)) {
-            Scanner sc_pid = new Scanner(line);
-            pid = sc_pid.nextInt();
-            break;
+      try (Scanner sc = new Scanner(content)) {
+         String line = null;
+         while (sc.hasNextLine() || (line == null)) {
+            line = sc.nextLine();
+            if (line.contains(swarmJar) && line.contains(UID_JVM_ARG + uid)) {
+               try (Scanner scPid = new Scanner(line)) {
+                  pid = scPid.nextInt();
+               }
+               break;
+            }
          }
+         LOG.debug("Found PID [{}].", pid);
       }
-      LOG.debug("Found PID [{}].", pid);
+
       return pid;
+   }
+
+   public static boolean isJarFileValid(File jarFile) {
+      boolean resultJarFileValid = true;
+      try (ZipFile file = new ZipFile(jarFile)) {
+         Enumeration<? extends ZipEntry> entries = file.entries();
+         while (entries.hasMoreElements()) {
+            entries.nextElement();
+         }
+      } catch (Exception ex) {
+         resultJarFileValid = false;
+      }
+      return resultJarFileValid;
    }
 
    public static boolean javaProcessStatusToolExists() {
@@ -114,7 +118,7 @@ public class SwarmUtil {
       Future<ProcessResult> future  = null;
       try {
          LOG.info("Looking up jps.exe");
-         future = new ProcessExecutor().command("where", "jps.exe").readOutput(true)
+         future = new ProcessExecutor().command("where", JPS_EXE).readOutput(true)
                                        .start().getFuture();
          ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
          if (processResult.getExitValue() != 0) {
@@ -152,14 +156,20 @@ public class SwarmUtil {
       return success;
    }
 
-   private static void logExtApp(String appName, String stdOut, int exitValue) {
-      StringBuffer sb = new StringBuffer();
-      sb.append("Ext App [{}] Info:\n");
-      sb.append("--------------------------------------------------\n");
-      sb.append("[StdOut]\n{}\n[/StdOut]\n");
-      sb.append("Rc: {}\n");
-      sb.append("--------------------------------------------------");
-      LOG.debug(sb.toString(), appName, stdOut, exitValue);
+   public static boolean pidExists(int pid) {
+      boolean               resultPidExists = false;
+      Future<ProcessResult> future;
+      try {
+         LOG.debug("Checking existence of PID [{}]", pid);
+         future = new ProcessExecutor().command(JPS_EXE, "-mlv").readOutput(true)
+                                       .start().getFuture();
+         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
+         resultPidExists = parsePid(processResult.outputUTF8(), pid);
+         LOG.debug("PID [{}] exists: {}", pid, resultPidExists);
+      } catch (Exception e) {
+         LOG.error("Error executing pidExists: {}", ExceptionUtils.getStackTrace(e));
+      }
+      return resultPidExists;
    }
 
    public static boolean sigIntSwarm(int pid) {
@@ -199,23 +209,27 @@ public class SwarmUtil {
       return new Pair<>(process, teeLogFilename);
    }
 
-   private static String getLogFilename(String[] command) {
-      String logFilename;
-      String jarArg = null;
-      String uidArg = null;
-      for (String cliArg : command) {
-         if (cliArg.toLowerCase().contains(".jar")) {
-            int endIndex = cliArg.indexOf(".jar");
-            jarArg = cliArg.substring(0, endIndex) + "_";
-         } else if (cliArg.toLowerCase().contains(UID_JVM_ARG)) {
-            int startIndex = cliArg.indexOf("=");
-            uidArg = cliArg.substring(startIndex + 1, cliArg.length());
+   private static boolean parsePid(String content, int pid) {
+      boolean resultPIDExists = false;
+      if (content.isEmpty()) {
+         return resultPIDExists;
+      }
+
+      LOG.debug("Searching for PID [{}] in content:\n {}", pid, content);
+      try (Scanner sc = new Scanner(content)) {
+         String line = null;
+         while (sc.hasNextLine() || (line == null)) {
+            line = sc.nextLine();
+            try (Scanner scPid = new Scanner(line)) {
+               if (pid == scPid.nextInt()) {
+                  resultPIDExists = true;
+                  break;
+               }
+            }
          }
       }
-      logFilename = jarArg != null ? jarArg : "swarm_unknown_jar_";
-      logFilename = logFilename + (uidArg != null ? uidArg : System.currentTimeMillis());
 
-      return logFilename + ".log";
+      return resultPIDExists;
    }
 
    public static void waitForCriticalServicesDeregistration(String consulUrl, String serviceName,
@@ -265,6 +279,7 @@ public class SwarmUtil {
          Thread.sleep(millis);
       } catch (InterruptedException e) {
          success = false;
+         Thread.currentThread().interrupt();
       }
 
       return success;
@@ -304,21 +319,23 @@ public class SwarmUtil {
       return isJarValid;
    }
 
-   public static boolean isJarFileValid(File jarFile) {
-      boolean resultJarFileValid = true;
-      ZipFile file               = null;
-      try {
-         file = new ZipFile(jarFile);
-         Enumeration<? extends ZipEntry> entries = file.entries();
-         while (entries.hasMoreElements()) {
-            entries.nextElement();
+   private static String getLogFilename(String[] command) {
+      String logFilename;
+      String jarArg = null;
+      String uidArg = null;
+      for (String cliArg : command) {
+         if (cliArg.toLowerCase().contains(".jar")) {
+            int endIndex = cliArg.indexOf(".jar");
+            jarArg = cliArg.substring(0, endIndex) + "_";
+         } else if (cliArg.toLowerCase().contains(UID_JVM_ARG)) {
+            int startIndex = cliArg.indexOf('=');
+            uidArg = cliArg.substring(startIndex + 1, cliArg.length());
          }
-      } catch (Exception ex) {
-         resultJarFileValid = false;
-      } finally {
-         CloseableUtil.close(file);
       }
-      return resultJarFileValid;
+      logFilename = jarArg != null ? jarArg : "swarm_unknown_jar_";
+      logFilename = logFilename + (uidArg != null ? uidArg : System.currentTimeMillis());
+
+      return logFilename + ".log";
    }
 
    public static boolean waitUntilSwarmProcExits(int pid, long shutdownTimeoutInSec) {
@@ -330,41 +347,28 @@ public class SwarmUtil {
       return processExited;
    }
 
-   public static boolean pidExists(int pid) {
-      boolean               resultPidExists = false;
-      Future<ProcessResult> future;
-      try {
-         LOG.debug("Checking existence of PID [{}]", pid);
-         future = new ProcessExecutor().command("jps.exe", "-mlv").readOutput(true)
-                                       .start().getFuture();
-         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
-         resultPidExists = parsePid(processResult.outputUTF8(), pid);
-         LOG.debug("PID [{}] exists: {}", pid, resultPidExists);
-      } catch (Exception e) {
-         LOG.error("Error executing pidExists: {}", ExceptionUtils.getStackTrace(e));
-      }
-      return resultPidExists;
+   private static void logExtApp(String appName, String stdOut, int exitValue) {
+      StringBuilder sb = new StringBuilder();
+      sb.append("Ext App [{}] Info:\n");
+      sb.append("--------------------------------------------------\n");
+      sb.append("[StdOut]\n{}\n[/StdOut]\n");
+      sb.append("Rc: {}\n");
+      sb.append("--------------------------------------------------");
+      String content = sb.toString();
+      LOG.debug(content, appName, stdOut, exitValue);
    }
 
-   private static boolean parsePid(String content, int pid) {
-      boolean resultPIDExists = false;
-      if (content.isEmpty()) {
-         return resultPIDExists;
-      }
+   private static List<String> parseArgs(String args, String delimiter) {
+      List<String> resultArgs = new ArrayList<>();
+      try (Scanner sc = new Scanner(args).useDelimiter(delimiter)) {
+         String arg;
 
-      LOG.debug("Searching for PID [{}] in content:\n {}", pid, content);
-      Scanner sc   = new Scanner(content);
-      String  line = null;
-      while (sc.hasNextLine() || (line == null)) {
-         line = sc.nextLine();
-         Scanner sc_pid = new Scanner(line);
-         if (pid == sc_pid.nextInt()) {
-            resultPIDExists = true;
-            break;
+         while (sc.hasNext()) {
+            arg = delimiter + sc.next();
+            resultArgs.add(arg.trim());
          }
       }
-
-      return resultPIDExists;
+      return resultArgs;
    }
 
    private SwarmUtil() {}

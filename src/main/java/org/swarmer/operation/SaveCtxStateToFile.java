@@ -22,7 +22,7 @@ public class SaveCtxStateToFile extends DefaultOperation<SwarmerCtx, File> {
 
    @Override
    public void cleanUp() {
-
+      // Nothing to clean up
    }
 
    @Override

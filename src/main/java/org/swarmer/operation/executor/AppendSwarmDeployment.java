@@ -64,12 +64,11 @@ public class AppendSwarmDeployment extends SwarmDeploymentProcessor {
       File   coreFile    = getSrcFile();
       long   time        = System.currentTimeMillis();
       String newFilename = FilenameUtils.removeExtension(coreFile.getName()) + "-" + time + ".jar";
-      String resultPath  = coreFile.getParent() + "\\" + newFilename;
+      String resultPath  = coreFile.getParent() + File.pathSeparator + newFilename;
       return new File(resultPath);
    }
 
    private File getSrcFile() {
-      File coreFile = new File(containerCfg().getSwarmDeploymentCfg(0).getSwarmFilePath());
-      return coreFile;
+      return new File(containerCfg().getSwarmDeploymentCfg(0).getSwarmFilePath());
    }
 }

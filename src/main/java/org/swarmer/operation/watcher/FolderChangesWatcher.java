@@ -47,7 +47,7 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       if ((queuedKey != null) && queuedKey.isValid()) {
          processWatchEvents(queuedKey);
          if (!queuedKey.reset()) {
-            LOG.warn("WatchKey is closed [{}].", queuedKey.toString());
+            LOG.warn("WatchKey is closed [{}].", queuedKey);
          }
       }
    }
@@ -55,7 +55,6 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
    private void processWatchEvents(WatchKey queuedKey) throws SwarmerException {
       // If we do it in this way then we poll current events and remove them from list. Must be done in such a way
       // because every call to this function gets fresh list from event list. Do NOT put queuedKey.pollEvents() in the
-      // for loop (e.g. for (WatchEvent<?> watchEvent : queuedKey.pollEvents()) {})
       List<WatchEvent<?>> pollEvents = queuedKey.pollEvents();
       LOG.debug("Started polling watch events [size: {}]: {}", pollEvents.size(),
                 getWatchEventsInfo(queuedKey, pollEvents));
@@ -191,6 +190,17 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
       return findDeploymentCfg(watchKey).getName();
    }
 
+   @Override
+   protected void handleError(Exception exception) {
+      LOG.warn("Exception from processWatchEvents. Continue with watch. Error stacktrace: \n {}",
+               ExceptionUtils.getStackTrace(exception));
+   }
+
+   @Override
+   protected void operationFinalize() {
+      // This method is empty because we do not need to do any finalization!!!!!
+   }
+
    private DeploymentContainerCfg findDeploymentCfg(WatchKey watchKey) {
       for (int index = 0; index < cfg.deploymentContainerCfgsSize(); index++) {
          DeploymentContainerCfg containerCfg = cfg.getDeploymentContainerCfg(index);
@@ -199,15 +209,7 @@ public class FolderChangesWatcher extends InfiniteLoopOperation {
             return containerCfg;
          }
       }
-      return null;
+      String errMsg = String.format("DeploymentContainer not found [WatchKey: %s]!", watchKey);
+      throw ExceptionThrower.createIllegalArgumentException(errMsg);
    }
-
-   @Override
-   protected void handleError(Exception exception) {
-      LOG.warn("Exception from processWatchEvents. Continue with watch. Error stacktrace: \n {}",
-               ExceptionUtils.getStackTrace(exception));
-   }
-
-   @Override
-   protected void operationFinalize() {}
 }

@@ -11,7 +11,7 @@
             <outputDirectory></outputDirectory>
             <includes>
                 <include>swarmer-*.jar</include>
-                <include>start_swarmer.cmd</include>
+                <include>start_swarmer.tmpl.cmd</include>
             </includes>
         </fileSet>
         <fileSet>

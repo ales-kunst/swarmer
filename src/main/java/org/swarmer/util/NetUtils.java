@@ -16,6 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class NetUtils {
+   public static final  String LOCALHOST_IP_ADDRESS  = "127.0.0.1";
    public static final  int    MAX_PORT_NUMBER       = 65535;
    public static final  int    MIN_PORT_NUMBER       = 1100;
    private static final String IP_VALIDATION_PATTERN = "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}";
@@ -32,35 +33,6 @@ public class NetUtils {
          }
       }
       return freePort;
-   }
-
-   public static boolean isPortAvailable(int port) {
-      if (port < MIN_PORT_NUMBER || port > MAX_PORT_NUMBER) {
-         String errMsg = String.format("Invalid start port: %d", port);
-         ExceptionThrower.throwIllegalArgumentException(errMsg);
-      }
-
-      ServerSocket   serverSocket   = null;
-      DatagramSocket datagramSocket = null;
-      Socket         socket         = null;
-      try {
-         serverSocket = new ServerSocket(port);
-         serverSocket.setReuseAddress(true);
-         socket = new Socket("127.0.0.1", port);
-         socket.setReuseAddress(true);
-         datagramSocket = new DatagramSocket(port);
-         datagramSocket.setReuseAddress(true);
-
-         return true;
-      } catch (IOException e) {
-         // If IOEXception happens then we know that the port is already taken
-      } finally {
-         CloseableUtil.close(datagramSocket);
-         CloseableUtil.close(socket);
-         CloseableUtil.close(serverSocket);
-      }
-
-      return false;
    }
 
    public static List<InetAddress> getLocalIpAddresses() {
@@ -81,33 +53,52 @@ public class NetUtils {
             }
          }
       } catch (SocketException e1) {
+         // Just do nothing because we did not get all the Inet Addresses
       }
 
       return ipAddresses;
    }
 
-   public static StringBuffer getUrlContent(String urlAddress) throws IOException {
-      URL            url;
-      StringBuffer   resultContent;
-      BufferedReader contentReader = null;
-      try {
-         // get Url connection
-         url = new URL(urlAddress);
-         URLConnection conn = url.openConnection();
+   public static StringBuilder getUrlContent(String urlAddress) throws IOException {
+      URL           url;
+      StringBuilder resultContent;
 
-         // open the stream and put it into BufferedReader
-         contentReader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+      // get Url connection
+      url = new URL(urlAddress);
+      URLConnection conn = url.openConnection();
+
+      try (BufferedReader contentReader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
          String inputLine;
-         resultContent = new StringBuffer();
+         resultContent = new StringBuilder();
 
-         // Get Url content
          while ((inputLine = contentReader.readLine()) != null) {
             resultContent.append(inputLine);
          }
-
-      } finally {
-         CloseableUtil.close(contentReader);
       }
       return resultContent;
    }
+
+   public static boolean isPortAvailable(int port) {
+      if (port < MIN_PORT_NUMBER || port > MAX_PORT_NUMBER) {
+         String errMsg = String.format("Invalid start port: %d", port);
+         ExceptionThrower.throwIllegalArgumentException(errMsg);
+      }
+
+      boolean isAvailable = false;
+
+      try (ServerSocket serverSocket = new ServerSocket(port);
+           Socket socket = new Socket(LOCALHOST_IP_ADDRESS, port);
+           DatagramSocket datagramSocket = new DatagramSocket(port)) {
+         serverSocket.setReuseAddress(true);
+         socket.setReuseAddress(true);
+         datagramSocket.setReuseAddress(true);
+         isAvailable = true;
+      } catch (IOException e) {
+         // No need for code here
+      }
+
+      return isAvailable;
+   }
+
+   private NetUtils() {}
 }

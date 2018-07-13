@@ -26,10 +26,6 @@ public class SwarmJob implements Cloneable {
       state = State.WAITING;
    }
 
-   public Object clone() throws CloneNotSupportedException {
-      return super.clone();
-   }
-
    public Action getAction() {
       return action;
    }
@@ -75,15 +71,6 @@ public class SwarmJob implements Cloneable {
 
    public boolean isRunNew() {
       return action == Action.RUN_NEW;
-   }
-
-   public State waitUntilFinished() {
-      while (!isFinished()) {
-         try {
-            LOCK_STATE.wait();
-         } catch (InterruptedException e) {}
-      }
-      return state;
    }
 
    public boolean isFinished() {

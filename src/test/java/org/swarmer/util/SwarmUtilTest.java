@@ -80,7 +80,8 @@ public class SwarmUtilTest {
       waitSwarmToShutDown("demo-rest.jar", uid);
    }
 
-   private long startSwarm() throws IOException {
+   @Test
+   public void testHealthStatusOfSwarm() throws IOException {
       final String WINDOW_NAME = "Blue Instance";
       String       jarPath     = ".\\src\\scrapbook\\test-rest-app\\target\\demo-rest.jar";
       File         jarFile     = new File(jarPath);
@@ -89,22 +90,20 @@ public class SwarmUtilTest {
       String[] swarmArgs = SwarmUtil.createSwarmCliArguments(WINDOW_NAME,
                                                              "8080", jvmArgs, uid, "",
                                                              jarFile);
-      new File(FileUtil.WIN_TEE_APP_PATH).delete();
-      FileUtil.copyWinTeeAppToTmp();
       SwarmUtil.startSwarmInstance(swarmArgs);
       int timeWaited = 0;
       while (SwarmUtil.waitFor(1000)) {
-         StringBuffer urlContents = NetUtils.getUrlContent("http://localhost:8500/v1/health/service/QnstMS");
+         StringBuilder urlContents = NetUtils.getUrlContent("http://localhost:8500/v1/health/service/QnstMS");
          if (!urlContents.toString().equalsIgnoreCase("[]")) {
+            System.out.println("URL Contents: " + urlContents.toString());
+            Assert.assertTrue(SwarmUtil.killSwarmWindow(WINDOW_NAME));
             break;
          }
          if (timeWaited > DEFAULT_SWARM_STARTUP_TIME) {
-            throw new RuntimeException("Swarm could not be started!");
+            Assert.assertTrue("Swarm did not START", false);
          }
          timeWaited++;
       }
-
-      return uid;
    }
 
    private void waitSwarmToShutDown(String swarmJar, long uid) {
@@ -121,8 +120,7 @@ public class SwarmUtilTest {
       }
    }
 
-   @Test
-   public void testHealthStatusOfSwarm() throws IOException {
+   private long startSwarm() throws IOException {
       final String WINDOW_NAME = "Blue Instance";
       String       jarPath     = ".\\src\\scrapbook\\test-rest-app\\target\\demo-rest.jar";
       File         jarFile     = new File(jarPath);
@@ -131,20 +129,22 @@ public class SwarmUtilTest {
       String[] swarmArgs = SwarmUtil.createSwarmCliArguments(WINDOW_NAME,
                                                              "8080", jvmArgs, uid, "",
                                                              jarFile);
+      new File(FileUtil.WIN_TEE_APP_PATH).delete();
+      FileUtil.copyWinTeeAppToTmp();
       SwarmUtil.startSwarmInstance(swarmArgs);
       int timeWaited = 0;
       while (SwarmUtil.waitFor(1000)) {
-         StringBuffer urlContents = NetUtils.getUrlContent("http://localhost:8500/v1/health/service/QnstMS");
+         StringBuilder urlContents = NetUtils.getUrlContent("http://localhost:8500/v1/health/service/QnstMS");
          if (!urlContents.toString().equalsIgnoreCase("[]")) {
-            System.out.println("URL Contents: " + urlContents.toString());
-            Assert.assertTrue(SwarmUtil.killSwarmWindow(WINDOW_NAME));
             break;
          }
          if (timeWaited > DEFAULT_SWARM_STARTUP_TIME) {
-            Assert.assertTrue("Swarm did not START", false);
+            throw new RuntimeException("Swarm could not be started!");
          }
          timeWaited++;
       }
+
+      return uid;
    }
 
    @Test

@@ -14,16 +14,26 @@ public class ExceptionThrower {
       throw new SwarmerContextException(msg);
    }
 
-   public static void throwSwarmerException(String msg) throws SwarmerException {
-      throw new SwarmerException(msg);
+   public static void throwIllegalArgumentException(String msg) {
+      throw createIllegalArgumentException(msg);
    }
+
+   public static IllegalArgumentException createIllegalArgumentException(String errMsg, Object... args) {
+      return new IllegalArgumentException(String.format(errMsg, (Object[]) args));
+   }
+
+
 
    public static void throwValidationException(String msg) throws ValidationException {
       throw new ValidationException(msg);
    }
 
-   public static void throwIllegalArgumentException(String msg) {
-      throw new IllegalArgumentException(msg);
+   public static void throwSwarmerException(String msg) throws SwarmerException {
+      throw createSwarmerException(msg);
+   }
+
+   public static SwarmerException createSwarmerException(String errMsg, Object... args) {
+      return new SwarmerException(String.format(errMsg, (Object[]) args));
    }
 
    private ExceptionThrower() {}

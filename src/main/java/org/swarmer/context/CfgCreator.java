@@ -1,5 +1,7 @@
 package org.swarmer.context;
 
+import org.swarmer.exception.ExceptionThrower;
+import org.swarmer.exception.SwarmerException;
 import org.swarmer.json.DeploymentContainerCfg;
 import org.swarmer.json.SwarmDeploymentCfg;
 import org.swarmer.json.SwarmerCfg;
@@ -32,7 +34,7 @@ public class CfgCreator implements CtxElementVisitor<SwarmerCfg> {
    }
 
    @Override
-   public void visit(SwarmDeployment deployment) {
+   public void visit(SwarmDeployment deployment) throws SwarmerException {
       SwarmDeploymentCfg deploymentCfg = new SwarmDeploymentCfg(deployment.deploymentColor().value(),
                                                                 deployment.swarmFile().getAbsolutePath(),
                                                                 deployment.pid(),
@@ -45,8 +47,11 @@ public class CfgCreator implements CtxElementVisitor<SwarmerCfg> {
       return new SwarmerCfg(generalData, containerCfgs);
    }
 
-   private DeploymentContainerCfg getLastContainer() {
+   private DeploymentContainerCfg getLastContainer() throws SwarmerException {
       int lastElemIndex = containerCfgs.size() - 1;
-      return containerCfgs.isEmpty() ? null : containerCfgs.get(lastElemIndex);
+      if (!containerCfgs.isEmpty()) {
+         return containerCfgs.get(lastElemIndex);
+      }
+      throw ExceptionThrower.createSwarmerException("Container list empty.");
    }
 }

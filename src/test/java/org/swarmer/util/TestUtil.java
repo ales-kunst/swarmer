@@ -41,7 +41,7 @@ public class TestUtil {
    public static void waitForConsulToStart() throws IOException {
       int timeWaited = 0;
       while (SwarmUtil.waitFor(1000)) {
-         StringBuffer urlContents = NetUtils.getUrlContent("http://localhost:8500");
+         StringBuilder urlContents = NetUtils.getUrlContent("http://localhost:8500");
          if (!urlContents.toString().isEmpty()) {
             break;
          }

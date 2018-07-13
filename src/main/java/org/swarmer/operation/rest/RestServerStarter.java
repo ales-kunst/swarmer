@@ -61,7 +61,9 @@ public class RestServerStarter extends DefaultOperation<SwarmerCtx, Boolean> {
          StringWriter writer = new StringWriter();
          IOUtils.copy(inStream, writer, StandardCharsets.UTF_8);
          resultText = writer.toString();
-      } catch (IOException e) {}
+      } catch (IOException e) {
+         // Nothing to do here
+      }
       return resultText.trim();
    }
 

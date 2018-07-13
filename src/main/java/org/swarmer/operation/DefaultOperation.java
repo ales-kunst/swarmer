@@ -16,7 +16,8 @@ public abstract class DefaultOperation<CTX, RT> extends SwarmerOperation<CTX, RT
       setState(State.RUNNING);
       RT returnValue = null;
       try {
-         LOG.info("Starting Operation [{}]", name());
+         String operationName = name();
+         LOG.info("Starting Operation [{}]", operationName);
          returnValue = executionBock();
          setState(State.FINISHED);
       } catch (Exception e) {

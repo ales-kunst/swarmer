@@ -27,7 +27,7 @@ public abstract class SwarmerOperation<CTX, RT> {
       setState(State.WAITING);
    }
 
-   public abstract void cleanUp() throws Exception;
+   public abstract void cleanUp() throws Exception; // NOSONAR
 
    public abstract RT execute();
 
