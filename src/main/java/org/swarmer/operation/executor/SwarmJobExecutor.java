@@ -47,7 +47,7 @@ public class SwarmJobExecutor extends InfiniteLoopOperation {
    }
 
    @Override
-   protected void handleError(Exception exception) {
+   protected void handleError(Throwable exception) {
       swarmJob.setState(State.ERROR);
       LOG.warn("Exception from processWatchEvents. Continue with watch. Error stacktrace: \n {}",
                ExceptionUtils.getStackTrace(exception));

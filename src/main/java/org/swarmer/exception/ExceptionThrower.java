@@ -2,7 +2,7 @@ package org.swarmer.exception;
 
 public class ExceptionThrower {
 
-   public static void throwRuntimeError(Exception e) {
+   public static void throwRuntimeError(Throwable e) {
       throw new RuntimeException(e);
    }
 

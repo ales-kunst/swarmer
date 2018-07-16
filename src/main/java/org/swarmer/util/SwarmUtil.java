@@ -107,7 +107,7 @@ public class SwarmUtil {
          while (entries.hasMoreElements()) {
             entries.nextElement();
          }
-      } catch (Exception ex) {
+      } catch (Throwable ex) {
          resultJarFileValid = false;
       }
       return resultJarFileValid;

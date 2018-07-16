@@ -49,7 +49,7 @@ public class RestServerStarter extends DefaultOperation<SwarmerCtx, Boolean> {
    }
 
    @Override
-   protected void handleError(Exception exception) {
+   protected void handleError(Throwable exception) {
       LOG.error("Exception from executionBlock:\n{}", ExceptionUtils.getStackTrace(exception));
       On.setup().shutdown();
    }

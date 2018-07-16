@@ -21,13 +21,16 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
    private static final Logger LOG = LoggerFactory.getLogger(SwarmerCtx.class);
 
    // Locking objects
-   private final Object                    DEPLOYMENT_CONTAINER_LOCK = new Object();
-   private final Object                    SWARM_JOBS_LOCK           = new Object();
+   private final Object DEPLOYMENT_CONTAINER_LOCK = new Object();
+   private final Object OBSERVABLE_FILES_LOCK     = new Object();
+   private final Object SWARM_JOBS_LOCK           = new Object();
+
    // Local vatiables
-   private       List<DeploymentContainer> deploymentContainers;
-   private       List<SwarmJob>            swarmJobs;
-   private       SwarmerCfg.GeneralData    swarmerCfgGeneralData;
-   private       WatchService              watchService;
+   private List<DeploymentContainer> deploymentContainers;
+   private List<ObservableFile>      observableFiles;
+   private List<SwarmJob>            swarmJobs;
+   private SwarmerCfg.GeneralData    swarmerCfgGeneralData;
+   private WatchService              watchService;
 
    static Builder newBuilder(SwarmerCfg swarmerCfg) {
       return new Builder(swarmerCfg);
@@ -38,6 +41,7 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       this.swarmerCfgGeneralData = builder.swarmerCfg.getGeneralData();
       this.watchService = builder.watchService;
       this.swarmJobs = new ArrayList<>();
+      observableFiles = new ArrayList<>();
    }
 
    public void addDeployment(String containerName, SwarmDeployment swarmDeployment) {
@@ -51,13 +55,15 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       }
    }
 
-   public SwarmerCfg.GeneralData getGeneralCfgData() {
-      try {
-         return (SwarmerCfg.GeneralData) swarmerCfgGeneralData.clone();
-      } catch (Exception e) {
-         LOG.error("Error in getGeneralCfgData: {}", ExceptionUtils.getFullStackTrace(e));
+   public void addObservableFile(ObservableFile observableFile) {
+      LOG.info("Added {}", observableFile);
+      addObservableFilePrivate(observableFile);
+   }
+
+   private void addObservableFilePrivate(ObservableFile observableFile) {
+      synchronized (OBSERVABLE_FILES_LOCK) {
+         observableFiles.add(observableFile);
       }
-      return null;
    }
 
    public void addSwarmJob(SwarmJob swarrmJob) {
@@ -83,6 +89,12 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
    public void clearDeploymentInProgress(String containerName) {
       Optional<DeploymentContainer> container = searchDeploymentContainer(containerName);
       container.ifPresent(DeploymentContainer::clearDeploymentInProgress);
+   }
+
+   public void clearObservableFiles() {
+      synchronized (OBSERVABLE_FILES_LOCK) {
+         observableFiles.clear();
+      }
    }
 
    public void deploymentInProgress(String containerName) {
@@ -135,16 +147,13 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       return resultContainerCfg;
    }
 
-   public boolean removeDeployment(String containerName, int pid) {
-      boolean                       resultSuccess = false;
-      Optional<DeploymentContainer> container     = searchDeploymentContainer(containerName);
-      if (container.isPresent()) {
-         DeploymentColor color = container.get().currentDeploymentColor();
-         if (color != null) {
-            resultSuccess = container.get().removeSwarmDeployment(color, pid);
-         }
+   public SwarmerCfg.GeneralData getGeneralCfgData() {
+      try {
+         return (SwarmerCfg.GeneralData) swarmerCfgGeneralData.clone();
+      } catch (Exception e) {
+         LOG.error("Error in getGeneralCfgData: {}", ExceptionUtils.getFullStackTrace(e));
       }
-      return resultSuccess;
+      return null;
    }
 
    public int getLockWaitTimeout() {
@@ -179,6 +188,17 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       return result;
    }
 
+   public ObservableFile popObservableFile() {
+      ObservableFile resultObservableFile = null;
+      synchronized (OBSERVABLE_FILES_LOCK) {
+         if (!observableFiles.isEmpty()) {
+            resultObservableFile = observableFiles.get(0);
+            observableFiles.remove(resultObservableFile);
+         }
+      }
+      return resultObservableFile;
+   }
+
    public SwarmJob popSwarmJob() {
       synchronized (SWARM_JOBS_LOCK) {
          if (swarmJobs.isEmpty()) {
@@ -190,11 +210,27 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       }
    }
 
+   public boolean removeDeployment(String containerName, int pid) {
+      boolean                       resultSuccess = false;
+      Optional<DeploymentContainer> container     = searchDeploymentContainer(containerName);
+      if (container.isPresent()) {
+         DeploymentColor color = container.get().currentDeploymentColor();
+         if (color != null) {
+            resultSuccess = container.get().removeSwarmDeployment(color, pid);
+         }
+      }
+      return resultSuccess;
+   }
+
    private Optional<DeploymentContainer> searchDeploymentContainer(String name) {
       return deploymentContainers.stream()
                                  .filter(container ->
                                                  container.deploymentContainerCfg().getName().equalsIgnoreCase(name))
                                  .findFirst();
+   }
+
+   public void returnObservableFile(ObservableFile observableFile) {
+      addObservableFilePrivate(observableFile);
    }
 
    SwarmerCfg.GeneralData swarmerCfgGeneralData() {

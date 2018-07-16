@@ -20,7 +20,7 @@ public abstract class DefaultOperation<CTX, RT> extends SwarmerOperation<CTX, RT
          LOG.info("Starting Operation [{}]", operationName);
          returnValue = executionBock();
          setState(State.FINISHED);
-      } catch (Exception e) {
+      } catch (Throwable e) {
          setState(State.ERROR);
          handleError(e);
       }
@@ -29,5 +29,5 @@ public abstract class DefaultOperation<CTX, RT> extends SwarmerOperation<CTX, RT
 
    protected abstract RT executionBock() throws Exception;
 
-   protected abstract void handleError(Exception e);
+   protected abstract void handleError(Throwable e);
 }

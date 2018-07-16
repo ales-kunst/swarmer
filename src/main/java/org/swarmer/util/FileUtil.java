@@ -6,9 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.util.Random;
 
 public class FileUtil {
@@ -89,6 +87,13 @@ public class FileUtil {
       return deleted;
    }
 
+   public static Path getFullPath(WatchKey queuedKey, WatchEvent<?> watchEvent) {
+      Path watchEventFile   = (Path) watchEvent.context();
+      Path watchEventFolder = (Path) queuedKey.watchable();
+
+      return watchEventFolder.resolve(watchEventFile);
+   }
+
    public static String getFromResource(Class<?> clazz, String resource, String encoding) {
       String                result    = null;
       InputStream           inStream  = null;
@@ -130,6 +135,7 @@ public class FileUtil {
       try {
          LOG.info("Moving file [{} -> {}]", srcFile.getAbsolutePath(), destFile.getAbsolutePath());
          Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+         LOG.info("Successfully moved file [{} -> {}].", srcFile.getAbsolutePath(), destFile.getAbsolutePath());
          movedSuccessfully = true;
       } catch (IOException e) {
          LOG.warn("Error at moving file [{} -> {}]:\n{}", srcFile.getAbsolutePath(),

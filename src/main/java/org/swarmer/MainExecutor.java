@@ -11,6 +11,7 @@ import org.swarmer.operation.SwarmerOperation;
 import org.swarmer.operation.executor.SwarmJobExecutor;
 import org.swarmer.operation.rest.RestServerStarter;
 import org.swarmer.operation.watcher.FolderChangesWatcher;
+import org.swarmer.operation.watcher.ObservableFileMover;
 import org.swarmer.util.FileUtil;
 
 import java.io.File;
@@ -72,6 +73,7 @@ public class MainExecutor {
 
    public MainExecutor startOperations() {
       addOperation(folderWatcher());
+      addOperation(observableFileMover());
       addOperation(swarmDeployer());
 
       for (SwarmerOperation swarmerOperation : infiniteLoopOperations.values()) {
@@ -90,6 +92,10 @@ public class MainExecutor {
 
    private InfiniteLoopOperation folderWatcher() {
       return new FolderChangesWatcher(FolderChangesWatcher.OP_NAME, ctx);
+   }
+
+   private InfiniteLoopOperation observableFileMover() {
+      return new ObservableFileMover(ObservableFileMover.OP_NAME, ctx);
    }
 
    private InfiniteLoopOperation swarmDeployer() {

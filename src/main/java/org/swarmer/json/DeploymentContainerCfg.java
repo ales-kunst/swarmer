@@ -131,6 +131,11 @@ public class DeploymentContainerCfg implements Cloneable {
       this.watchKeyHash = watchKeyHash;
    }
 
+   @JsonIgnore
+   public boolean isnameEqual(String name) {
+      return getName().equalsIgnoreCase(name);
+   }
+
    public int swarmDeploymentCfgsSize() {
       return swarmDeploymentCfgs.size();
    }

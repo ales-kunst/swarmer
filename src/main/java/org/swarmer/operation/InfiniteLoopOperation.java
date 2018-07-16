@@ -70,6 +70,10 @@ public abstract class InfiniteLoopOperation extends SwarmerOperation<SwarmerCtx,
                   setState(State.ERROR);
                   stopRunning();
                   LOG.error("Error In Operation [{}]: {}", name(), ExceptionUtils.getStackTrace(e));
+               } catch (Throwable t) {
+                  setState(State.ERROR);
+                  stopRunning();
+                  LOG.error("Fastal Error In Operation [{}]: {}", name(), ExceptionUtils.getStackTrace(t));
                }
             }
          }
@@ -89,7 +93,7 @@ public abstract class InfiniteLoopOperation extends SwarmerOperation<SwarmerCtx,
 
    protected abstract void loopBlock() throws Exception;
 
-   protected abstract void handleError(Exception exception);
+   protected abstract void handleError(Throwable exception);
 
    protected abstract void operationFinalize();
 

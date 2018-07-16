@@ -37,7 +37,7 @@ public class SaveCtxStateToFile extends DefaultOperation<SwarmerCtx, File> {
    }
 
    @Override
-   protected void handleError(Exception e) {
+   protected void handleError(Throwable e) {
       ExceptionThrower.throwRuntimeError(e);
    }
 }
