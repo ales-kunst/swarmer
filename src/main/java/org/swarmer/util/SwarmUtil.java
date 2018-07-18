@@ -190,7 +190,7 @@ public class SwarmUtil {
          success = exitValue == 0;
 
       } catch (Exception e) {
-         LOG.error("Error executing sigIntSwarm:\n{}", ExceptionUtils.getStackTrace(e));
+         LOG.warn("Error executing sigIntSwarm:\n{}", ExceptionUtils.getStackTrace(e));
       }
       return success;
    }
