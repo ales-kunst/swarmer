@@ -56,9 +56,12 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
    }
 
    protected void shutdownSwarmInstance(String consulUrl, String serviceName, int pid, String windowTitle) {
-      boolean swarmExited     = false;
-      boolean pidExists       = SwarmUtil.pidExists(pid);
-      boolean sigInted        = pidExists && SwarmUtil.sigIntSwarm(pid);
+      boolean swarmExited = false;
+      boolean pidExists   = SwarmUtil.pidExists(pid);
+      boolean sigInted    = false;
+      if (pidExists) {
+         sigInted = SwarmUtil.sigIntSwarm(pid);
+      }
       boolean processSigInted = pidExists && sigInted;
 
       if (processSigInted) {
