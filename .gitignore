@@ -9,6 +9,9 @@ logs/
 # Default excludes
 #
 
+# Logs
+*.log
+
 # Binaries
 *.7z
 *.dmg
