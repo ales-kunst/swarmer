@@ -11,8 +11,8 @@ import java.util.List;
 
 public class CfgCreator implements CtxElementVisitor<SwarmerCfg> {
 
-   private SwarmerCfg.GeneralData       generalData;
    private List<DeploymentContainerCfg> containerCfgs;
+   private SwarmerCfg.GeneralData       generalData;
 
    public CfgCreator() {
       generalData = null;
@@ -35,7 +35,8 @@ public class CfgCreator implements CtxElementVisitor<SwarmerCfg> {
 
    @Override
    public void visit(SwarmDeployment deployment) throws SwarmerException {
-      SwarmDeploymentCfg deploymentCfg = new SwarmDeploymentCfg(deployment.deploymentColor().value(),
+      SwarmDeploymentCfg deploymentCfg = new SwarmDeploymentCfg(deployment.consulServiceId(),
+                                                                deployment.deploymentColor().value(),
                                                                 deployment.swarmFile().getAbsolutePath(),
                                                                 deployment.pid(),
                                                                 deployment.windowTitle());

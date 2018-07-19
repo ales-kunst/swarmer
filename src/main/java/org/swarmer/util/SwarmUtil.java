@@ -18,18 +18,20 @@ import java.util.Scanner;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 
 public class SwarmUtil {
    public static final  String       JPS_EXE               = "jps.exe";
+   public static final  ObjectMapper JSON_MAPPER           = new ObjectMapper();
    public static final  String       UID_JVM_ARG           = "-Duid=";
    private static final String       APP_ARG_DELIMETER     = " ";
    private static final String       CMD_COMMAND           = "cmd.exe";
    private static final String       JAR_OPTION            = "-jar";
    private static final String       JAVA_COMMAND          = "java";
-   public static final  ObjectMapper JSON_MAPPER           = new ObjectMapper();
    private static final String       JVM_ARG_DELIMETER     = "-D";
    private static final String       JVM_SWARM_PORT_OPTION = "-Dswarm.http.port=";
    private static final Logger       LOG                   = LoggerFactory.getLogger(SwarmUtil.class);
@@ -59,6 +61,91 @@ public class SwarmUtil {
       cliArgs.add(swarmJar.getName());
       cliArgs.addAll(parseArgs(appArgs, APP_ARG_DELIMETER));
       return cliArgs.toArray(new String[cliArgs.size()]);
+   }
+
+   public static void deregisterAllCriticalServices(String consulUrl, String serviceName,
+                                                    long appWaitTimeoutSeconds) {
+      try {
+         final ConsulQuery consulQuery = ConsulQuery.url(consulUrl);
+         LOG.debug(
+                 "|---> Starting Wait for deregistering of all critical services from Consul [Servicename: {}; Timeout: {}]",
+                 serviceName, appWaitTimeoutSeconds);
+         loopUntilTimeout((Long time) -> consulQuery.deregisterCriticalServices(serviceName), appWaitTimeoutSeconds);
+         LOG.debug("--->| End Wait for deregistering of all critical services from Consul [Servicename: {}]",
+                   serviceName);
+      } catch (IOException ioe) {
+         LOG.warn("There was an error when deregistering all critical services:\n {}",
+                  ExceptionUtils.getStackTrace(ioe));
+      }
+   }
+
+   private static void loopUntilTimeout(Predicate<Long> predicate, long waitTimeoutInSec) {
+      final int defaultExecWait = 1000;
+      loopUntilTimeout(predicate, waitTimeoutInSec, defaultExecWait);
+   }
+
+   private static void loopUntilTimeout(Predicate<Long> predicate, long waitTimeoutInSec, long nextExecInMillis) {
+      long startTime           = System.currentTimeMillis();
+      long timeElapsed         = 0;
+      long waitTimeoutInMillis = waitTimeoutInSec * 1000;
+      while (true) {
+         predicate.test(timeElapsed);
+         timeElapsed = System.currentTimeMillis() - startTime;
+         if (timeElapsed >= waitTimeoutInMillis) {
+            break;
+         }
+         waitFor(nextExecInMillis);
+      }
+      LOG.debug("Loop until timeout [ElapsedTime: {}; TimeoutInMillis: {}].", timeElapsed, waitTimeoutInMillis);
+   }
+
+   public static boolean waitFor(long millis) {
+      boolean success = true;
+      try {
+         Thread.sleep(millis);
+      } catch (InterruptedException e) {
+         success = false;
+         Thread.currentThread().interrupt();
+      }
+
+      return success;
+   }
+
+   public static String getBindAddressFromJvmArgs(String commandLine) {
+      final String  regex         = "\\-Dswarm\\.bind\\.address=([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)";
+      final int     firstGroup    = 1;
+      final Pattern pattern       = Pattern.compile(regex, Pattern.MULTILINE);
+      final Matcher matcher       = pattern.matcher(commandLine);
+      String        resultAddress = null;
+
+      while (matcher.find()) {
+         resultAddress = matcher.group(firstGroup);
+      }
+
+      return resultAddress;
+   }
+
+   public static boolean javaProcessStatusToolExists() {
+      boolean               success = true;
+      Future<ProcessResult> future;
+      try {
+         LOG.info("Looking up jps.exe");
+         future = new ProcessExecutor().command("where", JPS_EXE).readOutput(true)
+                                       .start().getFuture();
+         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
+         if (processResult.getExitValue() != 0) {
+            success = false;
+         }
+      } catch (Exception e) {
+         LOG.error("Error executing javaProcessStatusToolExists: {}", ExceptionUtils.getStackTrace(e));
+         success = false;
+      }
+      if (success) {
+         LOG.info("jps.exe found");
+      } else {
+         LOG.info("jps.exe not found");
+      }
+      return success;
    }
 
    public static int getSwarmPid(String swarmJar, long uid) {
@@ -113,27 +200,21 @@ public class SwarmUtil {
       return resultJarFileValid;
    }
 
-   public static boolean javaProcessStatusToolExists() {
-      boolean               success = true;
-      Future<ProcessResult> future  = null;
+   // TODO Instead of jps.exe use "wmic process where caption="java.exe" get Caption, ProcessId, CommandLine". Additional parsing needed here.
+   public static boolean pidExists(int pid) {
+      boolean               resultPidExists = false;
+      Future<ProcessResult> future;
       try {
-         LOG.info("Looking up jps.exe");
-         future = new ProcessExecutor().command("where", JPS_EXE).readOutput(true)
+         LOG.debug("Checking existence of PID [{}]", pid);
+         future = new ProcessExecutor().command(JPS_EXE, "-mlv").readOutput(true)
                                        .start().getFuture();
          ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
-         if (processResult.getExitValue() != 0) {
-            success = false;
-         }
+         resultPidExists = parsePid(processResult.outputUTF8(), pid);
+         LOG.debug("PID [{}] exists: {}", pid, resultPidExists);
       } catch (Exception e) {
-         LOG.error("Error executing javaProcessStatusToolExists: {}", ExceptionUtils.getStackTrace(e));
-         success = false;
+         LOG.warn("Error in pidExists: {}", ExceptionUtils.getStackTrace(e));
       }
-      if (success) {
-         LOG.info("jps.exe found");
-      } else {
-         LOG.info("jps.exe not found");
-      }
-      return success;
+      return resultPidExists;
    }
 
    public static boolean killSwarmWindow(String windowName) {
@@ -156,20 +237,27 @@ public class SwarmUtil {
       return success;
    }
 
-   public static boolean pidExists(int pid) {
-      boolean               resultPidExists = false;
-      Future<ProcessResult> future;
-      try {
-         LOG.debug("Checking existence of PID [{}]", pid);
-         future = new ProcessExecutor().command(JPS_EXE, "-mlv").readOutput(true)
-                                       .start().getFuture();
-         ProcessResult processResult = future.get(60, TimeUnit.SECONDS);
-         resultPidExists = parsePid(processResult.outputUTF8(), pid);
-         LOG.debug("PID [{}] exists: {}", pid, resultPidExists);
-      } catch (Exception e) {
-         LOG.error("Error executing pidExists: {}", ExceptionUtils.getStackTrace(e));
+   private static boolean parsePid(String content, int pid) {
+      boolean resultPIDExists = false;
+      if (content.isEmpty()) {
+         return resultPIDExists;
       }
-      return resultPidExists;
+
+      LOG.debug("Searching for PID [{}] in content:\n {}", pid, content);
+      try (Scanner sc = new Scanner(content)) {
+         String line = null;
+         while (sc.hasNextLine() || (line == null)) {
+            line = sc.nextLine();
+            try (Scanner scPid = new Scanner(line)) {
+               if (pid == scPid.nextInt()) {
+                  resultPIDExists = true;
+                  break;
+               }
+            }
+         }
+      }
+
+      return resultPIDExists;
    }
 
    public static boolean sigIntSwarm(int pid) {
@@ -209,43 +297,43 @@ public class SwarmUtil {
       return new Pair<>(process, teeLogFilename);
    }
 
-   private static boolean parsePid(String content, int pid) {
-      boolean resultPIDExists = false;
-      if (content.isEmpty()) {
-         return resultPIDExists;
-      }
-
-      LOG.debug("Searching for PID [{}] in content:\n {}", pid, content);
-      try (Scanner sc = new Scanner(content)) {
-         String line = null;
-         while (sc.hasNextLine() || (line == null)) {
-            line = sc.nextLine();
-            try (Scanner scPid = new Scanner(line)) {
-               if (pid == scPid.nextInt()) {
-                  resultPIDExists = true;
-                  break;
-               }
-            }
-         }
-      }
-
-      return resultPIDExists;
-   }
-
-   public static void waitForCriticalServicesDeregistration(String consulUrl, String serviceName,
-                                                            long appWaitTimeoutSeconds) {
+   public static boolean waitForCriticalServiceDeregistration(String consulUrl, String servicename, String serviceId,
+                                                              long appWaitTimeoutSeconds) {
+      boolean serviceUnregistered = false;
       try {
          final ConsulQuery consulQuery = ConsulQuery.url(consulUrl);
          LOG.debug(
-                 "|---> Starting Wait for Deregistering of Critical Services on Consul [Servicename: {}; Timeout: {}]",
-                 serviceName, appWaitTimeoutSeconds);
-         boolean anyServiceUnregistered = waitLoop((Long time) -> consulQuery.deregisterCriticalServices(serviceName),
-                                                   appWaitTimeoutSeconds);
-         LOG.debug("--->| End Wait for Deregistering of Critical Services on Consul [Servicename: {}; Success: {}]",
-                   serviceName, anyServiceUnregistered);
+                 "|---> Starting Wait for deregistering of critical service from Consul [ServiceId: {}; Timeout: {}]",
+                 serviceId, appWaitTimeoutSeconds);
+         serviceUnregistered = waitLoop(
+                 (Long time) -> consulQuery.deregisterCriticalService(servicename, serviceId),
+                 appWaitTimeoutSeconds);
+         LOG.debug("--->| End Wait for Deregistering of critical service from Consul [ServiceId: {}; Success: {}]",
+                   serviceId, serviceUnregistered);
       } catch (IOException ioe) {
-         LOG.warn("There was an error in ConsulClient:\n {}", ExceptionUtils.getStackTrace(ioe));
+         LOG.warn("There was an error deregistering critical service [{}]:\n {}", serviceId,
+                  ExceptionUtils.getStackTrace(ioe));
       }
+      return serviceUnregistered;
+   }
+
+   private static String getLogFilename(String[] command) {
+      String logFilename;
+      String jarArg = null;
+      String uidArg = null;
+      for (String cliArg : command) {
+         if (cliArg.toLowerCase().contains(".jar")) {
+            int endIndex = cliArg.indexOf(".jar");
+            jarArg = cliArg.substring(0, endIndex) + "_";
+         } else if (cliArg.toLowerCase().contains(UID_JVM_ARG)) {
+            int startIndex = cliArg.indexOf('=');
+            uidArg = cliArg.substring(startIndex + 1, cliArg.length());
+         }
+      }
+      logFilename = jarArg != null ? jarArg : "swarm_unknown_jar_";
+      logFilename = logFilename + (uidArg != null ? uidArg : System.currentTimeMillis());
+
+      return logFilename + ".log";
    }
 
    private static boolean waitLoop(Predicate<Long> predicate, long waitTimeoutInSec) {
@@ -253,40 +341,15 @@ public class SwarmUtil {
       return waitLoop(predicate, waitTimeoutInSec, defaultExecWait);
    }
 
-   private static boolean waitLoop(Predicate<Long> predicate, long waitTimeoutInSec, long nextExecInMillis) {
-      boolean successfulRun       = false;
-      long    startTime           = System.currentTimeMillis();
-      long    timeElapsed         = 0;
-      long    waitTimeoutInMillis = waitTimeoutInSec * 1000;
-      while (true) {
-         if (predicate.test(timeElapsed)) {
-            successfulRun = true;
-            break;
-         }
-         timeElapsed = System.currentTimeMillis() - startTime;
-         if (timeElapsed > waitTimeoutInMillis) {
-            break;
-         }
-         waitFor(nextExecInMillis);
-      }
-      LOG.debug("Wait loop info [success: {}; elapsed_time: {} ].", successfulRun, timeElapsed);
-      return successfulRun;
-   }
-
-   public static boolean waitFor(long millis) {
-      boolean success = true;
-      try {
-         Thread.sleep(millis);
-      } catch (InterruptedException e) {
-         success = false;
-         Thread.currentThread().interrupt();
-      }
-
-      return success;
-   }
-
-   public static boolean waitForInSecs(long secs) {
-      return waitFor(secs * 1000);
+   private static void logExtApp(String appName, String stdOut, int exitValue) {
+      StringBuilder sb = new StringBuilder();
+      sb.append("Ext App [{}] Info:\n");
+      sb.append("--------------------------------------------------\n");
+      sb.append("[StdOut]\n{}\n[/StdOut]\n");
+      sb.append("Rc: {}\n");
+      sb.append("--------------------------------------------------");
+      String content = sb.toString();
+      LOG.debug(content, appName, stdOut, exitValue);
    }
 
    public static boolean waitForServiceRegistration(String consulUrl, String serviceName, String serviceId,
@@ -310,34 +373,6 @@ public class SwarmUtil {
       return resultRegistered;
    }
 
-   public static boolean waitForValidJar(File jarFile, long waitTimeoutInSec) {
-      boolean isJarValid;
-      LOG.debug("|---> Starting Wait for valid Jar [file: {}; Timeout: {}]", jarFile.getAbsolutePath(),
-                waitTimeoutInSec);
-      isJarValid = waitLoop((Long timeElapsed) -> isJarFileValid(jarFile), waitTimeoutInSec, 3000);
-      LOG.debug("--->| End Wait for valid Jar [file: {}; Success: {}]", jarFile.getAbsolutePath(), isJarValid);
-      return isJarValid;
-   }
-
-   private static String getLogFilename(String[] command) {
-      String logFilename;
-      String jarArg = null;
-      String uidArg = null;
-      for (String cliArg : command) {
-         if (cliArg.toLowerCase().contains(".jar")) {
-            int endIndex = cliArg.indexOf(".jar");
-            jarArg = cliArg.substring(0, endIndex) + "_";
-         } else if (cliArg.toLowerCase().contains(UID_JVM_ARG)) {
-            int startIndex = cliArg.indexOf('=');
-            uidArg = cliArg.substring(startIndex + 1, cliArg.length());
-         }
-      }
-      logFilename = jarArg != null ? jarArg : "swarm_unknown_jar_";
-      logFilename = logFilename + (uidArg != null ? uidArg : System.currentTimeMillis());
-
-      return logFilename + ".log";
-   }
-
    public static boolean waitUntilSwarmProcExits(int pid, long shutdownTimeoutInSec) {
       boolean processExited;
       LOG.debug("|---> Starting Wait for Swarm process to exit [PID: {}; Start: {}]", pid, System.currentTimeMillis());
@@ -345,17 +380,6 @@ public class SwarmUtil {
       LOG.debug("--->| End Wait for Swarm process to exit [PID: {}; ProcessExited: {}, End: {}]", pid, processExited,
                 System.currentTimeMillis());
       return processExited;
-   }
-
-   private static void logExtApp(String appName, String stdOut, int exitValue) {
-      StringBuilder sb = new StringBuilder();
-      sb.append("Ext App [{}] Info:\n");
-      sb.append("--------------------------------------------------\n");
-      sb.append("[StdOut]\n{}\n[/StdOut]\n");
-      sb.append("Rc: {}\n");
-      sb.append("--------------------------------------------------");
-      String content = sb.toString();
-      LOG.debug(content, appName, stdOut, exitValue);
    }
 
    private static List<String> parseArgs(String args, String delimiter) {
@@ -369,6 +393,27 @@ public class SwarmUtil {
          }
       }
       return resultArgs;
+   }
+
+   private static boolean waitLoop(Predicate<Long> predicate, long waitTimeoutInSec, long nextExecInMillis) {
+      boolean successfulRun       = false;
+      long    startTime           = System.currentTimeMillis();
+      long    timeElapsed         = 0;
+      long    waitTimeoutInMillis = waitTimeoutInSec * 1000;
+      while (true) {
+         if (predicate.test(timeElapsed)) {
+            successfulRun = true;
+            break;
+         }
+         timeElapsed = System.currentTimeMillis() - startTime;
+         if (timeElapsed >= waitTimeoutInMillis) {
+            break;
+         }
+         waitFor(nextExecInMillis);
+      }
+      LOG.debug("Wait loop info [Success: {}; ElapsedTime: {}; TimeoutInMillis: {}].", successfulRun, timeElapsed,
+                waitTimeoutInMillis);
+      return successfulRun;
    }
 
    private SwarmUtil() {}

@@ -31,7 +31,7 @@ public class SwarmerCfgTest {
    public void testCreateSwarmerCfgFromJson() throws IOException {
       SwarmerCfg cfgObj = getDefaultSwarmerCfg();
 
-      Assert.assertEquals("C:\\winapp\\Java\\1.8.0_102\\X64\\JDK", cfgObj.getGeneralData().getJavaPath());
+      Assert.assertEquals(40, cfgObj.getGeneralData().getDeregisterConsulServiceTimeout().intValue());
       Assert.assertEquals(90, cfgObj.getGeneralData().getSwarmDefaultStartupTime().intValue());
       Assert.assertEquals(1, cfgObj.deploymentContainerCfgsSize());
       Assert.assertEquals(0, cfgObj.getDeploymentContainerCfg(0).swarmDeploymentCfgsSize());

@@ -13,7 +13,7 @@ import org.swarmer.util.SwarmUtil;
 import java.nio.file.Path;
 
 public class ObservableFileMover extends InfiniteLoopOperation {
-   public static final  String OP_NAME                 = "Folder Changes Mover";
+   public static final  String OP_NAME                 = "Observable File Mover";
    private static final Logger LOG                     = LoggerFactory.getLogger(ObservableFileMover.class);
    private static final long   OBSERVABLE_FILE_TIMEOUT = 600000;
 
@@ -48,7 +48,8 @@ public class ObservableFileMover extends InfiniteLoopOperation {
          }
 
          boolean shouldReturnObservableFile = !(srcJarFileValid && hasJarFileBeenMoved);
-         boolean shouldStopObservingFile    = observableFile.getTimeObserving() > OBSERVABLE_FILE_TIMEOUT;
+         boolean shouldStopObservingFile =
+                 (observableFile.getTimeObserving() > OBSERVABLE_FILE_TIMEOUT) || !srcPath.toFile().exists();
 
          if (shouldReturnObservableFile && !shouldStopObservingFile) {
             getContext().returnObservableFile(observableFile);

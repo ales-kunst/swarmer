@@ -67,42 +67,42 @@ public class SwarmerCfg implements Cloneable {
    @JsonIgnoreProperties(ignoreUnknown = true)
    public static class GeneralData implements Cloneable {
 
-      private final String  javaPath;
-      private final Integer lockWaitTimeout;
+      private final Integer deregisterConsulServiceTimeout;
       private final Integer serverPort;
+      private final Integer shutdownSwarmTimeout;
       private final Integer swarmDefaultStartupTime;
       private final Integer swarmPortLower;
       private final Integer swarmPortUpper;
 
 
       @JsonCreator
-      public GeneralData(@JsonProperty("java_path") String javaPath,
+      public GeneralData(@JsonProperty("deregister_consul_service_timeout") Integer deregisterConsulServiceTimeout,
                          @JsonProperty("server_port") Integer serverPort,
-                         @JsonProperty("lock_wait_timeout") Integer lockWaitTimeout,
+                         @JsonProperty("shutdown_swarm_timeout") Integer shutdownSwarmTimeout,
                          @JsonProperty("swarm_port_lower") Integer swarmPortLower,
                          @JsonProperty("swarm_port_upper") Integer swarmPortUpper,
                          @JsonProperty("swarm_default_startup_time") Integer swarmDefaultStartupTime) {
-         this.javaPath = javaPath;
-         this.lockWaitTimeout = lockWaitTimeout;
+         this.deregisterConsulServiceTimeout = deregisterConsulServiceTimeout;
+         this.shutdownSwarmTimeout = shutdownSwarmTimeout;
          this.serverPort = serverPort;
          this.swarmDefaultStartupTime = swarmDefaultStartupTime;
          this.swarmPortLower = swarmPortLower;
          this.swarmPortUpper = swarmPortUpper;
       }
 
-      @JsonGetter("java_path")
-      public String getJavaPath() {
-         return javaPath;
-      }
-
-      @JsonGetter("lock_wait_timeout")
-      public Integer getLockWaitTimeout() {
-         return lockWaitTimeout;
+      @JsonGetter("deregister_consul_service_timeout")
+      public Integer getDeregisterConsulServiceTimeout() {
+         return deregisterConsulServiceTimeout;
       }
 
       @JsonGetter("server_port")
       public Integer getServerPort() {
          return serverPort;
+      }
+
+      @JsonGetter("shutdown_swarm_timeout")
+      public Integer getShutdownSwarmTimeout() {
+         return shutdownSwarmTimeout;
       }
 
       @JsonGetter("swarm_default_startup_time")
@@ -126,14 +126,14 @@ public class SwarmerCfg implements Cloneable {
 
       @Override
       public String toString() {
-         return "GeneralData{" +
-                "javaPath='" + javaPath + '\'' +
-                ", lockWaitTimeout=" + lockWaitTimeout +
+         return "GeneralData [" +
+                "deregisterConsulServiceTimeout=" + deregisterConsulServiceTimeout +
                 ", serverPort=" + serverPort +
+                ", shutdownSwarmTimeout=" + shutdownSwarmTimeout +
                 ", swarmDefaultStartupTime=" + swarmDefaultStartupTime +
                 ", swarmPortLower=" + swarmPortLower +
                 ", swarmPortUpper=" + swarmPortUpper +
-                '}';
+                ']';
       }
    }
 

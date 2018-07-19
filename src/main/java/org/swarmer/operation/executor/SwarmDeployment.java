@@ -73,10 +73,8 @@ class SwarmDeployment extends SwarmDeploymentProcessor {
    private void shutdownOldDeployment() {
       for (int index = 0; index < containerCfg().swarmDeploymentCfgsSize(); index++) {
          SwarmDeploymentCfg deploymentCfg = containerCfg().getSwarmDeploymentCfg(index);
-         int                pid           = deploymentCfg.getPid();
-         String             windowTitle   = deploymentCfg.getWindowTitle();
 
-         shutdownSwarmInstance(containerCfg().getConsulUrl(), containerCfg().getConsulServiceName(), pid, windowTitle);
+         shutdownSwarmInstance(containerCfg().getConsulUrl(), containerCfg().getConsulServiceName(), deploymentCfg);
          File fileToRemove = new File(deploymentCfg.getSwarmFilePath());
          if (fileToRemove.exists()) {
             LOG.info("Removing old deployment file [{}].", fileToRemove.getAbsolutePath());

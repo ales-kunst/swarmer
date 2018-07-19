@@ -9,6 +9,7 @@ import org.swarmer.context.SwarmDeployment;
 import org.swarmer.context.SwarmJob;
 import org.swarmer.context.SwarmerCtx;
 import org.swarmer.json.DeploymentContainerCfg;
+import org.swarmer.json.SwarmDeploymentCfg;
 import org.swarmer.operation.SaveCtxStateToFile;
 import org.swarmer.util.SwarmUtil;
 import org.swarmer.util.SwarmerInputParams;
@@ -17,8 +18,7 @@ import java.io.File;
 import java.io.IOException;
 
 public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
-   private static final Logger LOG = LoggerFactory.getLogger(
-           SwarmDeploymentProcessor.class);
+   private static final Logger LOG = LoggerFactory.getLogger(SwarmDeploymentProcessor.class);
 
    // Local variables
    private final IntRange               portRange;
@@ -55,8 +55,10 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
       return portRange;
    }
 
-   protected void shutdownSwarmInstance(String consulUrl, String serviceName, int pid, String windowTitle) {
+   protected void shutdownSwarmInstance(String consulUrl, String serviceName, SwarmDeploymentCfg deploymentCfg) {
       boolean swarmExited = false;
+      int     pid         = deploymentCfg.getPid();
+      String  windowTitle = deploymentCfg.getWindowTitle();
       boolean pidExists   = SwarmUtil.pidExists(pid);
       boolean sigInted    = false;
       if (pidExists) {
@@ -65,7 +67,7 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
       boolean processSigInted = pidExists && sigInted;
 
       if (processSigInted) {
-         int shutdownTimeout = getCtx().getGeneralCfgData().getLockWaitTimeout();
+         int shutdownTimeout = getCtx().getGeneralCfgData().getShutdownSwarmTimeout();
          swarmExited = SwarmUtil.waitUntilSwarmProcExits(pid, shutdownTimeout);
       }
       if (!swarmExited) {
@@ -73,9 +75,23 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
                           + " Hard killing window [{}].";
          LOG.warn(warnMsg, pid, windowTitle);
          SwarmUtil.killSwarmWindow(windowTitle);
-         SwarmUtil.waitForCriticalServicesDeregistration(consulUrl, serviceName, 10);
+         deregisterServiceFromConsul(consulUrl, serviceName, deploymentCfg);
       } else {
          LOG.info("SIGINT successfully sent to process with PID [{}].", pid);
+      }
+   }
+
+   private void deregisterServiceFromConsul(String consulUrl, String serviceName, SwarmDeploymentCfg deploymentCfg) {
+      final int defaultTimeout = getCtx().getGeneralCfgData().getDeregisterConsulServiceTimeout();
+      String    serviceId      = deploymentCfg.getConsulServiceId();
+      if ((serviceId == null) || serviceId.isEmpty()) {
+         SwarmUtil.deregisterAllCriticalServices(consulUrl, serviceName, defaultTimeout);
+      } else {
+         boolean serviceDeregistered = SwarmUtil.waitForCriticalServiceDeregistration(consulUrl, serviceName, serviceId,
+                                                                                      defaultTimeout);
+         if (!serviceDeregistered) {
+            SwarmUtil.deregisterAllCriticalServices(consulUrl, serviceName, defaultTimeout);
+         }
       }
    }
 
@@ -106,6 +122,7 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
          int pid = SwarmUtil.getSwarmPid(copiedJarFile.getName(), timeStarted);
          LOG.info("Swarm started [PID: {}; WindowTitle: {}].", pid, windowTitle);
          resultDeployment = SwarmDeployment.builder()
+                                           .consulServiceId(getConsulServiceId(port))
                                            .deploymentColor(colorToDeploy)
                                            .file(copiedJarFile)
                                            .pid(pid)
@@ -129,6 +146,16 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
 
    private String getServiceId(int port) {
       return containerCfg().getConsulServiceName() + ":127.0.0.1:" + port;
+   }
+
+   private String getConsulServiceId(int port) {
+      String formattedJvmArgs = containerCfg().getJvmParams().replaceAll("\"", "");
+      String bindAddress      = SwarmUtil.getBindAddressFromJvmArgs(formattedJvmArgs);
+      if (bindAddress == null) {
+         bindAddress = "127.0.0.1";
+      }
+      String serviceName = containerCfg().getConsulServiceName();
+      return String.format("%s:%s:%d", serviceName, bindAddress, port);
    }
 
 }

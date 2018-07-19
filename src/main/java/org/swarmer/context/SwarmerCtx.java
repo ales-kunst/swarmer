@@ -156,10 +156,6 @@ public class SwarmerCtx implements Destroyable, CtxVisitableElement {
       return null;
    }
 
-   public int getLockWaitTimeout() {
-      return swarmerCfgGeneralData.getLockWaitTimeout() != null ? swarmerCfgGeneralData.getLockWaitTimeout() : 3000;
-   }
-
    public int getPort() {
       return swarmerCfgGeneralData.getServerPort() != null ? swarmerCfgGeneralData.getServerPort() : 10080;
    }

@@ -5,16 +5,19 @@ import org.swarmer.context.DeploymentColor;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SwarmDeploymentCfg implements Cloneable {
+   private String  consulServiceId;
    private String  deploymentColor;
    private Integer pid;
    private String  swarmFilePath;
    private String  windowTitle;
 
    @JsonCreator
-   public SwarmDeploymentCfg(@JsonProperty("deployment_color") String deploymentColor,
+   public SwarmDeploymentCfg(@JsonProperty("consul_service_id") String consulServiceId,
+                             @JsonProperty("deployment_color") String deploymentColor,
                              @JsonProperty("swarm_file_path") String swarmFilePath,
                              @JsonProperty("pid") Integer pid,
                              @JsonProperty("window_title") String windowTitle) {
+      this.consulServiceId = consulServiceId;
       this.deploymentColor = deploymentColor;
       this.swarmFilePath = swarmFilePath;
       this.pid = pid;
@@ -25,14 +28,20 @@ public class SwarmDeploymentCfg implements Cloneable {
       return super.clone();
    }
 
+   @JsonGetter("consul_service_id")
+   public String getConsulServiceId() {
+      return consulServiceId;
+   }
+
    @Override
    public String toString() {
-      return "SwarmDeploymentCfg{" +
-             "deploymentColor='" + deploymentColor + '\'' +
-             ", swarmFilePath='" + swarmFilePath + '\'' +
+      return "SwarmDeploymentCfg [" +
+             "consulServiceId='" + consulServiceId + '\'' +
+             ", deploymentColor='" + deploymentColor + '\'' +
              ", pid=" + pid +
+             ", swarmFilePath='" + swarmFilePath + '\'' +
              ", windowTitle='" + windowTitle + '\'' +
-             '}';
+             ']';
    }
 
    @JsonGetter("deployment_color")

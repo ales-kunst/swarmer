@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class ConsulQuery {
@@ -26,15 +27,19 @@ public class ConsulQuery {
       this.consulClient = new ConsulClient(consulUrl.getHost(), consulUrl.getPort());
    }
 
-   public boolean deregisterCriticalServices(String serviceName) {
-      List<Check> serviceChecks       = getAllCriticalServices(serviceName);
-      boolean     serviceDeregistered = !serviceChecks.isEmpty();
+   public boolean deregisterCriticalService(String serviceName, String serviceId) {
+      List<Check> serviceChecks = getAllCriticalServices(serviceName);
 
-      for (Check check : serviceChecks) {
-         LOG.info("Deregistering Service from Consul [{}]", check.getServiceId());
-         consulClient.agentServiceDeregister(check.getServiceId());
+      Optional<Check> serviceCheck = serviceChecks.stream().filter(
+              check -> check.getServiceId().equalsIgnoreCase(serviceId)).findAny();
+
+      boolean criticalServicePresent = serviceCheck.isPresent();
+      if (criticalServicePresent) {
+         LOG.info("Deregistering Service from Consul [{}]", serviceId);
+         consulClient.agentServiceDeregister(serviceId);
       }
-      return serviceDeregistered;
+
+      return criticalServicePresent;
    }
 
    List<Check> getAllCriticalServices(String serviceName) {
@@ -45,6 +50,17 @@ public class ConsulQuery {
       return checks.stream()
                    .filter(def -> def.getStatus() == Check.CheckStatus.CRITICAL)
                    .collect(Collectors.toList());
+   }
+
+   public boolean deregisterCriticalServices(String serviceName) {
+      List<Check> serviceChecks       = getAllCriticalServices(serviceName);
+      boolean     serviceDeregistered = !serviceChecks.isEmpty();
+
+      for (Check check : serviceChecks) {
+         LOG.info("Deregistering Service from Consul [{}]", check.getServiceId());
+         consulClient.agentServiceDeregister(check.getServiceId());
+      }
+      return serviceDeregistered;
    }
 
    public Check getServiceCheck(String serviceName, String serviceId) {
