@@ -49,7 +49,7 @@ public class ObservableFileMover extends InfiniteLoopOperation {
 
          boolean shouldReturnObservableFile = !(srcJarFileValid && hasJarFileBeenMoved);
          boolean shouldStopObservingFile =
-                 (observableFile.getTimeObserving() > OBSERVABLE_FILE_TIMEOUT) || !srcPath.toFile().exists();
+                 (observableFile.getTimeObserving() > OBSERVABLE_FILE_TIMEOUT);
 
          if (shouldReturnObservableFile && !shouldStopObservingFile) {
             getContext().returnObservableFile(observableFile);
