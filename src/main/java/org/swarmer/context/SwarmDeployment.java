@@ -1,57 +1,44 @@
 package org.swarmer.context;
 
+import lombok.Getter;
+import lombok.ToString;
+import lombok.experimental.Accessors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.swarmer.json.SwarmDeploymentCfg;
 
 import java.io.File;
 
+@ToString
+@Accessors(fluent = true)
 public class SwarmDeployment implements CtxVisitableElement {
+   @Getter
    private final String          consulServiceId;
+   @Getter
    private final DeploymentColor deploymentColor;
+   @Getter
    private final int             pid;
+   @Getter
    private final File            swarmFile;
+   @Getter
    private final String          windowTitle;
 
-   public static Builder builder() {
-      return new Builder();
+   public static SwarmDeploymentBuilder builder(SwarmDeploymentCfg deploymentCfg) {
+      return new SwarmDeploymentBuilder(deploymentCfg);
    }
 
-   static Builder builder(SwarmDeploymentCfg swarmDeploymentCfg) {
-      return new Builder(swarmDeploymentCfg);
+   public static SwarmDeploymentBuilder builder() {
+      return new SwarmDeploymentBuilder();
    }
 
-   private SwarmDeployment(Builder builder) {
-      this.consulServiceId = builder.consulServiceId;
-      this.deploymentColor = builder.deploymentColor;
-      this.pid = builder.pid;
-      this.swarmFile = builder.swarmFile;
-      this.windowTitle = builder.windowTitle;
-   }
-
-   public String consulServiceId() { return consulServiceId; }
-
-   public DeploymentColor deploymentColor() {
-      return deploymentColor;
-   }
-
-   public int pid() {
-      return pid;
-   }
-
-   public File swarmFile() {
-      return swarmFile;
-   }
-
-   @Override
-   public String toString() {
-      return "SwarmDeployment [" +
-             "consulServiceId='" + consulServiceId + '\'' +
-             ", deploymentColor=" + deploymentColor +
-             ", pid=" + pid +
-             ", swarmFile=" + swarmFile +
-             ", windowTitle='" + windowTitle + '\'' +
-             ']';
+   @lombok.Builder
+   private SwarmDeployment(String consulServiceId, DeploymentColor deploymentColor, int pid, File swarmFile,
+                           String windowTitle) {
+      this.consulServiceId = consulServiceId;
+      this.deploymentColor = deploymentColor;
+      this.pid = pid;
+      this.swarmFile = swarmFile;
+      this.windowTitle = windowTitle;
    }
 
    @Override
@@ -59,32 +46,17 @@ public class SwarmDeployment implements CtxVisitableElement {
       visitor.visit(this);
    }
 
-   public String windowTitle() {
-      return windowTitle;
-   }
-
    SwarmDeploymentCfg getSwarmerDeploymentCfg() {
       return new SwarmDeploymentCfg(consulServiceId, deploymentColor.value(), swarmFile.getAbsolutePath(), pid,
                                     windowTitle);
    }
 
-   public static class Builder {
-      private static final Logger          LOG = LoggerFactory.getLogger(SwarmDeployment.Builder.class);
-      private              String          consulServiceId;
-      private              DeploymentColor deploymentColor;
-      private              int             pid;
-      private              File            swarmFile;
-      private              String          windowTitle;
+   public static class SwarmDeploymentBuilder {
+      private static final Logger LOG = LoggerFactory.getLogger(SwarmDeployment.SwarmDeploymentBuilder.class);
 
-      private Builder() {
-         consulServiceId = null;
-         pid = -1;
-         swarmFile = null;
-         windowTitle = null;
-      }
+      private SwarmDeploymentBuilder() {}
 
-      private Builder(SwarmDeploymentCfg swarmDeploymentCfg) {
-         consulServiceId = swarmDeploymentCfg.getConsulServiceId();
+      private SwarmDeploymentBuilder(SwarmDeploymentCfg swarmDeploymentCfg) {
          deploymentColor = DeploymentColor.value(swarmDeploymentCfg.getDeploymentColor());
          pid = swarmDeploymentCfg.getPid() != null ? swarmDeploymentCfg.getPid() : -1;
          swarmFile = swarmDeploymentCfg.getSwarmFilePath() != null ? new File(swarmDeploymentCfg.getSwarmFilePath())
@@ -93,34 +65,10 @@ public class SwarmDeployment implements CtxVisitableElement {
       }
 
       public SwarmDeployment build() {
-         SwarmDeployment resultDeployment = new SwarmDeployment(this);
+         SwarmDeployment resultDeployment = new SwarmDeployment(consulServiceId, deploymentColor, pid, swarmFile,
+                                                                windowTitle);
          LOG.debug("Created {}.", resultDeployment);
          return resultDeployment;
-      }
-
-      public Builder consulServiceId(String consulServiceId) {
-         this.consulServiceId = consulServiceId;
-         return this;
-      }
-
-      public Builder deploymentColor(DeploymentColor deploymentColor) {
-         this.deploymentColor = deploymentColor;
-         return this;
-      }
-
-      public Builder file(File swarmFile) {
-         this.swarmFile = swarmFile;
-         return this;
-      }
-
-      public Builder pid(int pid) {
-         this.pid = pid;
-         return this;
-      }
-
-      public Builder windowTitle(String windowTitle) {
-         this.windowTitle = windowTitle;
-         return this;
       }
    }
 }

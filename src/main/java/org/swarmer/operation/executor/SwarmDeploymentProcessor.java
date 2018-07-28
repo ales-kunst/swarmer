@@ -124,7 +124,7 @@ public abstract class SwarmDeploymentProcessor extends SwarmJobProcessor {
          resultDeployment = SwarmDeployment.builder()
                                            .consulServiceId(getConsulServiceId(port))
                                            .deploymentColor(colorToDeploy)
-                                           .file(copiedJarFile)
+                                           .swarmFile(copiedJarFile)
                                            .pid(pid)
                                            .windowTitle(windowTitle)
                                            .build();
