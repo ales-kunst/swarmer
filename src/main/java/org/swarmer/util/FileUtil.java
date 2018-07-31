@@ -1,6 +1,7 @@
 package org.swarmer.util;
 
 import org.apache.commons.io.FileDeleteStrategy;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,27 +72,40 @@ public class FileUtil {
    }
 
    public static boolean forceRemoveFile(Path source) {
-      return forceRemoveFile(source.toFile());
+      return forceRemoveFile(source.toFile(), true);
    }
 
-   public static boolean forceRemoveFile(File file) {
+   private static boolean forceRemoveFile(File file, boolean shouldLog) {
       boolean deleted = false;
       try {
          FileDeleteStrategy.FORCE.delete(file);
-         LOG.debug("File [{}] could be SUCCESSFULLY removed.", file.getAbsolutePath());
+         if (shouldLog) {
+            LOG.debug("File [{}] could be SUCCESSFULLY removed.", file.getAbsolutePath());
+         }
          deleted = true;
       } catch (IOException ioe) {
-         LOG.warn("File [{}] could NOT be removed:\n{}", file.getAbsolutePath(), ExceptionUtils.getFullStackTrace(ioe));
+         if (shouldLog) {
+            LOG.warn("File [{}] could NOT be removed:\n{}", file.getAbsolutePath(),
+                     ExceptionUtils.getFullStackTrace(ioe));
+         }
       }
 
       return deleted;
    }
 
-   public static Path getFullPath(WatchKey queuedKey, WatchEvent<?> watchEvent) {
-      Path watchEventFile   = (Path) watchEvent.context();
-      Path watchEventFolder = (Path) queuedKey.watchable();
+   public static boolean forceRemoveFileNoLog(Path source) {
+      return forceRemoveFile(source.toFile(), false);
+   }
 
-      return watchEventFolder.resolve(watchEventFile);
+   public static Path generateNewFilename(Path destPath) {
+      File   destFile      = destPath.toFile();
+      String filenameNoExt = FilenameUtils.getBaseName(destFile.getName());
+      String filenameExt   = FilenameUtils.getExtension(destFile.getName());
+      long   number        = System.currentTimeMillis() % 1000;
+      String newFilename   = String.format("%s-%04d.%s", filenameNoExt, number, filenameExt);
+      File   newDestFile   = new File(destFile.getParent() + File.separator + newFilename);
+
+      return newDestFile.toPath();
    }
 
    public static String getFromResource(Class<?> clazz, String resource, String encoding) {
@@ -114,6 +128,13 @@ public class FileUtil {
          CloseableUtil.close(inStream);
       }
       return result;
+   }
+
+   public static Path getFullPath(WatchKey queuedKey, WatchEvent<?> watchEvent) {
+      Path watchEventFile   = (Path) watchEvent.context();
+      Path watchEventFolder = (Path) queuedKey.watchable();
+
+      return watchEventFolder.resolve(watchEventFile);
    }
 
    public static boolean matchesFilePattern(String fileName, String pattern) {

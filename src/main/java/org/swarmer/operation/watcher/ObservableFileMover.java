@@ -32,8 +32,20 @@ public class ObservableFileMover extends InfiniteLoopOperation {
 
       // If list of observable files is empty or the observable file does not exist then do nothing
       if (observableFile != null && observableFile.getSrcPath().toFile().exists()) {
-         Path    srcPath             = observableFile.getSrcPath();
-         Path    destPath            = observableFile.getDestPath();
+         Path    srcPath                 = observableFile.getSrcPath();
+         Path    destPath                = observableFile.getDestPath();
+         boolean shouldDestFileBeRenamed = destPath.toFile().exists() && !FileUtil.forceRemoveFileNoLog(destPath);
+
+         if (shouldDestFileBeRenamed) {
+            LOG.info("Destination file [{}] could not be removed (Locked by other process). "
+                     + "Renaming destination filename.",
+                     destPath.toFile().getAbsolutePath());
+            while (shouldDestFileBeRenamed) {
+               destPath = FileUtil.generateNewFilename(destPath);
+               shouldDestFileBeRenamed = destPath.toFile().exists() && !FileUtil.forceRemoveFileNoLog(destPath);
+            }
+         }
+
          boolean srcJarFileValid     = SwarmUtil.isJarFileValid(srcPath.toFile());
          boolean hasJarFileBeenMoved = srcJarFileValid && FileUtil.moveFile(srcPath, destPath);
 
